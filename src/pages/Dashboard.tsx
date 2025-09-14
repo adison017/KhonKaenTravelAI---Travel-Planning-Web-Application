@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Calendar, MapPin, DollarSign, Cloud, Eye, Edit3, Sparkles, Mountain, TreePine, Utensils } from "lucide-react";
+import { Plus, Calendar, MapPin, DollarSign, Cloud, Eye, Edit3, Sparkles, Mountain, TreePine, Utensils, Camera } from "lucide-react";
 import khonkaenHero from "@/assets/khonkaen-hero.jpg";
 
 interface TripCollection {
@@ -163,6 +163,16 @@ const Dashboard = () => {
                 <Utensils className="w-6 h-6" />
                 ร้านอาหารใกล้ฉัน
                 <span className="text-lg ml-2">🍜</span>
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="xl" 
+                onClick={() => navigate('/tourist-attraction-search')}
+                className="font-prompt animate-glow hover:scale-110 transition-all duration-300 shadow-2xl bg-khonkaen-nature/90 hover:bg-khonkaen-nature text-white border-0"
+              >
+                <Camera className="w-6 h-6" />
+                สถานที่ท่องเที่ยวใกล้ฉัน
+                <span className="text-lg ml-2">📍</span>
               </Button>
             </div>
           </div>
