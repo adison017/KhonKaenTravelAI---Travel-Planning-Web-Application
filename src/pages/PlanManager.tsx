@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { loadCollectionFromLocalStorage, saveCollectionToLocalStorage, Stop } from "@/lib/storage";
 import PlacesTab from "@/components/plan-manager/PlacesTab";
 import TransportTab from "@/components/plan-manager/TransportTab";
 import AccommodationTab from "@/components/plan-manager/AccommodationTab";
 import ActivitiesTab from "@/components/plan-manager/ActivitiesTab";
+import DayDetailsModal from "@/components/plan-manager/DayDetailsModal";
 
 interface Activity {
   title: string;
@@ -27,7 +29,7 @@ interface Plan {
   endLocation: string;
   transportation: string;
   accommodation: string;
-  stops: string[];
+  stops: Stop[];
   activities: Activity[];
 }
 
@@ -45,49 +47,38 @@ const PlanManager = () => {
   const navigate = useNavigate();
   
   const [selectedDay, setSelectedDay] = useState(1);
-  
-  // Mock data - in real app this would come from localStorage/API
-  const collection = {
-    collectionId: id,
-    name: "ทริปครอบครัวขอนแก่น 3 วัน",
-    category: "ครอบครัว",
-    startDate: "2025-04-10",
-    endDate: "2025-04-12",
-    budget: 9000,
-    weatherData: [
-      {
-        date: "2025-04-10",
-        temp: 32,
-        condition: "แดดจัด",
-        humidity: 65,
-        wind: 8,
-        forecast: "อากาศร้อน แนะนำดื่มน้ำบ่อย"
-      },
-      {
-        date: "2025-04-11",
-        temp: 30,
-        condition: "เมฆบางส่วน",
-        humidity: 70,
-        wind: 6,
-        forecast: "เหมาะสำหรับเดินเล่นกลางแจ้ง"
-      },
-      {
-        date: "2025-04-12",
-        temp: 29,
-        condition: "มีฝนเล็กน้อย",
-        humidity: 80,
-        wind: 5,
-        forecast: "พกร่มไว้ด้วย"
+  const [showDayDetails, setShowDayDetails] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>(() => {
+    // Try to load plans from localStorage first
+    if (id) {
+      const savedCollection = loadCollectionFromLocalStorage(id);
+      if (savedCollection) {
+        return savedCollection.plans || [];
       }
-    ] as WeatherData[],
-    plans: [
+    }
+    
+    // Default plans if nothing in localStorage
+    return [
       {
         day: 1,
         startLocation: "บ้านพักในตัวเมืองขอนแก่น",
         endLocation: "สวนสาธารณะศรีมหาโพธิ",
         transportation: "รถส่วนตัว",
         accommodation: "บ้านพักในตัวเมืองขอนแก่น (1,200 บาท/คืน)",
-        stops: ["หอศิลปวัฒนธรรมแห่งจังหวัดขอนแก่น", "ตลาดเหนือ"],
+        stops: [
+          {
+            name: "หอศิลปวัฒนธรรมแห่งจังหวัดขอนแก่น",
+            timeStart: "09:00",
+            timeEnd: "10:30",
+            description: "ชมนิทรรศการศิลปะพื้นบ้าน"
+          },
+          {
+            name: "ตลาดเหนือ",
+            timeStart: "11:00",
+            timeEnd: "12:00",
+            description: "ชิมข้าวเหนียวหมูปิ้งและน้ำตกแตงโม"
+          }
+        ],
         activities: [
           {
             title: "เยี่ยมชมสวนสาธารณะศรีมหาโพธิ",
@@ -146,21 +137,120 @@ const PlanManager = () => {
         stops: [],
         activities: []
       }
-    ] as Plan[]
-  };
+    ];
+  });
+  
+  // Load collection data from localStorage or use defaults
+  const collection = (() => {
+    if (id) {
+      const savedCollection = loadCollectionFromLocalStorage(id);
+      if (savedCollection) {
+        return savedCollection;
+      }
+    }
+    
+    // Default collection data
+    return {
+      collectionId: id || "",
+      name: "ทริปครอบครัวขอนแก่น 3 วัน",
+      category: "ครอบครัว",
+      startDate: "2025-04-10",
+      endDate: "2025-04-12",
+      budget: 9000,
+      weatherData: [
+        {
+          date: "2025-04-10",
+          temp: 32,
+          condition: "แดดจัด",
+          humidity: 65,
+          wind: 8,
+          forecast: "อากาศร้อน แนะนำดื่มน้ำบ่อย"
+        },
+        {
+          date: "2025-04-11",
+          temp: 30,
+          condition: "เมฆบางส่วน",
+          humidity: 70,
+          wind: 6,
+          forecast: "เหมาะสำหรับเดินเล่นกลางแจ้ง"
+        },
+        {
+          date: "2025-04-12",
+          temp: 29,
+          condition: "มีฝนเล็กน้อย",
+          humidity: 80,
+          wind: 5,
+          forecast: "พกร่มไว้ด้วย"
+        }
+      ] as WeatherData[],
+      plans: plans
+    };
+  })();
 
-  const currentPlan = collection.plans.find(p => p.day === selectedDay);
+  const currentPlan = plans.find(p => p.day === selectedDay);
   const currentWeather = collection.weatherData.find(w => {
     const planDate = new Date(collection.startDate);
     planDate.setDate(planDate.getDate() + selectedDay - 1);
     return w.date === planDate.toISOString().split('T')[0];
   });
 
-  const totalSpent = collection.plans.reduce((total, plan) => 
+  const totalSpent = plans.reduce((total, plan) => 
     total + plan.activities.reduce((dayTotal, activity) => dayTotal + activity.cost, 0), 0
   );
 
+  // Update functions
+  const updatePlanStops = (day: number, stops: Stop[]) => {
+    setPlans(prevPlans => 
+      prevPlans.map(plan => 
+        plan.day === day ? { ...plan, stops } : plan
+      )
+    );
+  };
 
+  const updatePlanTransportation = (day: number, startLocation: string, endLocation: string, transportation: string) => {
+    setPlans(prevPlans => 
+      prevPlans.map(plan => 
+        plan.day === day ? { ...plan, startLocation, endLocation, transportation } : plan
+      )
+    );
+  };
+
+  const updatePlanAccommodation = (day: number, accommodation: string) => {
+    setPlans(prevPlans => 
+      prevPlans.map(plan => 
+        plan.day === day ? { ...plan, accommodation } : plan
+      )
+    );
+  };
+
+  const updatePlanActivities = (day: number, activities: Activity[]) => {
+    setPlans(prevPlans => 
+      prevPlans.map(plan => 
+        plan.day === day ? { ...plan, activities } : plan
+      )
+    );
+  };
+
+  // Save function to persist collection data
+  const saveCollection = () => {
+    // Create collection data following the schema
+    const collectionToSave = {
+      collectionId: collection.collectionId,
+      name: collection.name,
+      category: collection.category,
+      startDate: collection.startDate,
+      endDate: collection.endDate,
+      budget: collection.budget,
+      weatherData: collection.weatherData,
+      plans: plans
+    };
+    
+    // Save to localStorage using utility function
+    saveCollectionToLocalStorage(collectionToSave);
+    
+    // Show a success message
+    alert("บันทึกข้อมูลสำเร็จ!");
+  };
 
   const getWeatherIcon = (condition: string) => {
     if (condition.includes("แดด")) return "☀️";
@@ -170,7 +260,7 @@ const PlanManager = () => {
   };
 
   const getDayStatus = (dayNum: number) => {
-    const plan = collection.plans.find(p => p.day === dayNum);
+    const plan = plans.find(p => p.day === dayNum);
     if (!plan || plan.activities.length === 0) return "empty";
     if (dayNum === selectedDay) return "active";
     return "complete";
@@ -206,10 +296,14 @@ const PlanManager = () => {
               ← กลับสู่หน้าหลัก
             </Button>
             <span className="text-3xl animate-float">🌿</span>
-            <div>
+            <div className="flex-1">
               <h1 className="text-xl font-bold text-foreground font-kanit">KhonKaenTravelAI</h1>
               <p className="text-xs text-muted-foreground font-sarabun">จัดการแผนการท่องเที่ยว</p>
             </div>
+            <Button variant="khonkaen" onClick={saveCollection} className="flex items-center gap-2">
+              <Save className="w-4 h-4" />
+              บันทึกข้อมูล
+            </Button>
           </div>
         </div>
       </header>
@@ -237,7 +331,10 @@ const PlanManager = () => {
                       status === "complete" && "bg-success/5 border-success/20",
                       status === "empty" && "bg-warning/5 border-warning/20"
                     )}
-                    onClick={() => setSelectedDay(plan.day)}
+                    onClick={() => {
+                      setSelectedDay(plan.day);
+                      setShowDayDetails(true);
+                    }}
                   >
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
@@ -297,22 +394,43 @@ const PlanManager = () => {
 
             {/* Places Tab */}
             <TabsContent value="places" className="space-y-4">
-              <PlacesTab currentPlan={currentPlan} />
+              <PlacesTab 
+                currentPlan={currentPlan} 
+                onUpdateStops={(stops) => updatePlanStops(selectedDay, stops)}
+                collectionId={id}
+                selectedDay={selectedDay}
+              />
             </TabsContent>
 
             {/* Transport Tab */}
             <TabsContent value="transport" className="space-y-4">
-              <TransportTab currentPlan={currentPlan} />
+              <TransportTab 
+                currentPlan={currentPlan} 
+                onUpdateTransportation={(startLocation, endLocation, transportation) => 
+                  updatePlanTransportation(selectedDay, startLocation, endLocation, transportation)}
+                collectionId={id}
+                selectedDay={selectedDay}
+              />
             </TabsContent>
 
             {/* Accommodation Tab */}
             <TabsContent value="accommodation" className="space-y-4">
-              <AccommodationTab currentPlan={currentPlan} />
+              <AccommodationTab 
+                currentPlan={currentPlan} 
+                onUpdateAccommodation={(accommodation) => updatePlanAccommodation(selectedDay, accommodation)}
+                collectionId={id}
+                selectedDay={selectedDay}
+              />
             </TabsContent>
 
             {/* Activities Tab */}
             <TabsContent value="activities" className="space-y-4">
-              <ActivitiesTab currentPlan={currentPlan} />
+              <ActivitiesTab 
+                currentPlan={currentPlan} 
+                onUpdateActivities={(activities) => updatePlanActivities(selectedDay, activities)}
+                collectionId={id}
+                selectedDay={selectedDay}
+              />
             </TabsContent>
           </Tabs>
 
@@ -354,6 +472,17 @@ const PlanManager = () => {
           )}
         </div>
       </div>
+      
+      {/* Day Details Modal */}
+      <DayDetailsModal
+        isOpen={showDayDetails}
+        onClose={() => setShowDayDetails(false)}
+        day={selectedDay}
+        plan={currentPlan}
+        weather={currentWeather}
+        formatDate={formatDate}
+        startDate={collection.startDate}
+      />
     </div>
   );
 };
