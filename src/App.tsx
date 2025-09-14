@@ -9,9 +9,8 @@ import CreateCollection from "./pages/CreateCollection";
 import PlanManager from "./pages/PlanManager";
 
 import RestaurantSearch from "./pages/RestaurantSearch";
-=======
+import TouristAttractionSearch from "./pages/TouristAttractionSearch";
 import MyCollections from "./pages/MyCollections";
-
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,9 +28,8 @@ const App = () => (
           <Route path="/plan/:id" element={<PlanManager />} />
 
           <Route path="/restaurant-search" element={<RestaurantSearch />} />
-=======
+          <Route path="/tourist-attraction-search" element={<TouristAttractionSearch />} />
           <Route path="/my-collections" element={<MyCollections />} />
-
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
