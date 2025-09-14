@@ -94,10 +94,9 @@ const CreateCollection = () => {
       ]
     };
 
-    // Save to localStorage
-    const existingCollections = JSON.parse(localStorage.getItem('khonkaen-collections') || '[]');
-    existingCollections.push(newCollection);
-    localStorage.setItem('khonkaen-collections', JSON.stringify(existingCollections));
+    // Save to localStorage using the correct key format
+    const key = `collection_${collectionId}`;
+    localStorage.setItem(key, JSON.stringify(newCollection));
 
     toast({
       title: "สร้างทริปสำเร็จ!",

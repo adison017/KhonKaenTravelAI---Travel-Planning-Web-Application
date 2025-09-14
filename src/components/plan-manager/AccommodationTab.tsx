@@ -78,12 +78,12 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
     setSearchResults([]);
   };
 
-  const handleSave = () => {
+  // Update the parent component when accommodation changes
+  useEffect(() => {
     if (onUpdateAccommodation) {
       onUpdateAccommodation(accommodation);
-      alert("บันทึกข้อมูลที่พักสำเร็จ!");
     }
-  };
+  }, [accommodation, onUpdateAccommodation]);
 
   return (
     <Card>
@@ -95,6 +95,14 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              ⚠️ หมายเหตุ: ข้อมูลที่พักในแถบนี้เป็นข้อมูลอ้างอิงเท่านั้น 
+              ไม่ควรถูกใช้เป็นจุดเริ่มต้นหรือจุดสิ้นสุดในการเดินทาง
+              ระบบจะบันทึกจุดเริ่มต้น/สิ้นสุดแยกต่างหากในแท็บ "การเดินทาง"
+            </p>
+          </div>
+          
           {/* LocalStorage Data Display - Only for selected day */}
           {localStorageData && selectedDay && (
             <div className="text-xs text-muted-foreground mb-2">
@@ -140,10 +148,6 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
               className="mt-1"
             />
           </div>
-          
-          <Button onClick={handleSave} variant="khonkaen">
-            บันทึกข้อมูลที่พัก
-          </Button>
           
           {/* Map Preview */}
           <div 
