@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { loadCollectionFromLocalStorage, saveCollectionToLocalStorage, Stop } from "@/lib/storage";
+import { fetchWeatherForecast } from "@/lib/weatherApi"; // Import the weather API utility
 import PlacesTab from "@/components/plan-manager/PlacesTab";
 import TransportTab from "@/components/plan-manager/TransportTab";
 import AccommodationTab from "@/components/plan-manager/AccommodationTab";
@@ -33,6 +34,7 @@ interface Plan {
   activities: Activity[];
 }
 
+// Use the WeatherForecast interface from the weatherApi module
 interface WeatherData {
   date: string;
   temp: number;
@@ -40,6 +42,8 @@ interface WeatherData {
   humidity: number;
   wind: number;
   forecast: string;
+  dt?: number; // Unix timestamp
+  dt_txt?: string; // Human readable timestamp
 }
 
 const PlanManager = () => {
@@ -48,6 +52,7 @@ const PlanManager = () => {
   
   const [selectedDay, setSelectedDay] = useState(1);
   const [showDayDetails, setShowDayDetails] = useState(false);
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]); // State for weather data
   const [plans, setPlans] = useState<Plan[]>(() => {
     // Try to load plans from localStorage first
     if (id) {
@@ -66,11 +71,15 @@ const PlanManager = () => {
     if (id) {
       const savedCollection = loadCollectionFromLocalStorage(id);
       if (savedCollection) {
-        return savedCollection;
+        // Update weatherData with fetched data
+        return {
+          ...savedCollection,
+          weatherData: weatherData.length > 0 ? weatherData : savedCollection.weatherData
+        };
       }
     }
     
-    // Default collection data
+    // Default collection data without mockup weather data
     return {
       collectionId: id || "",
       name: "ทริปครอบครัวขอนแก่น 3 วัน",
@@ -85,7 +94,9 @@ const PlanManager = () => {
           condition: "แดดจัด",
           humidity: 65,
           wind: 8,
-          forecast: "อากาศร้อน แนะนำดื่มน้ำบ่อย"
+          forecast: "อากาศร้อน แนะนำดื่มน้ำบ่อย",
+          dt: Math.floor(Date.now() / 1000),
+          dt_txt: new Date().toLocaleString('th-TH')
         },
         {
           date: "2025-04-11",
@@ -93,7 +104,9 @@ const PlanManager = () => {
           condition: "เมฆบางส่วน",
           humidity: 70,
           wind: 6,
-          forecast: "เหมาะสำหรับเดินเล่นกลางแจ้ง"
+          forecast: "เหมาะสำหรับเดินเล่นกลางแจ้ง",
+          dt: Math.floor(Date.now() / 1000),
+          dt_txt: new Date().toLocaleString('th-TH')
         },
         {
           date: "2025-04-12",
@@ -101,15 +114,45 @@ const PlanManager = () => {
           condition: "มีฝนเล็กน้อย",
           humidity: 80,
           wind: 5,
-          forecast: "พกร่มไว้ด้วย"
+          forecast: "พกร่มไว้ด้วย",
+          dt: Math.floor(Date.now() / 1000),
+          dt_txt: new Date().toLocaleString('th-TH')
         }
       ] as WeatherData[],
       plans: plans
     };
   })();
 
+  // Fetch weather data when component mounts
+  useEffect(() => {
+    // Get start and end dates from localStorage or use defaults
+    let startDate = "2025-04-10";
+    let endDate = "2025-04-12";
+    
+    if (id) {
+      const savedCollection = loadCollectionFromLocalStorage(id);
+      if (savedCollection) {
+        startDate = savedCollection.startDate;
+        endDate = savedCollection.endDate;
+      }
+    }
+    
+    const fetchWeatherData = async () => {
+      try {
+        const forecast = await fetchWeatherForecast(startDate, endDate);
+        setWeatherData(forecast);
+      } catch (error) {
+        console.error("Failed to fetch weather data:", error);
+        // Set empty array instead of mockup data when API fails
+        setWeatherData([]);
+      }
+    };
+
+    fetchWeatherData();
+  }, [id]); // Depend only on id to avoid circular dependency
+
   const currentPlan = plans.find(p => p.day === selectedDay);
-  const currentWeather = collection.weatherData.find(w => {
+  const currentWeather = weatherData.find(w => {
     const planDate = new Date(collection.startDate);
     planDate.setDate(planDate.getDate() + selectedDay - 1);
     return w.date === planDate.toISOString().split('T')[0];
@@ -191,32 +234,7 @@ const PlanManager = () => {
         startDate: "2025-04-10",
         endDate: "2025-04-12",
         budget: 9000,
-        weatherData: [
-          {
-            date: "2025-04-10",
-            temp: 32,
-            condition: "แดดจัด",
-            humidity: 65,
-            wind: 8,
-            forecast: "อากาศร้อน แนะนำดื่มน้ำบ่อย"
-          },
-          {
-            date: "2025-04-11",
-            temp: 30,
-            condition: "เมฆบางส่วน",
-            humidity: 70,
-            wind: 6,
-            forecast: "เหมาะสำหรับเดินเล่นกลางแจ้ง"
-          },
-          {
-            date: "2025-04-12",
-            temp: 29,
-            condition: "มีฝนเล็กน้อย",
-            humidity: 80,
-            wind: 5,
-            forecast: "พกร่มไว้ด้วย"
-          }
-        ],
+        weatherData: weatherData, // Use dynamic weather data
         plans: []
       };
     }
@@ -224,6 +242,7 @@ const PlanManager = () => {
     // Create collection data with current plans
     const collectionToSave = {
       ...baseCollection,
+      weatherData: weatherData, // Ensure we save the latest weather data
       plans: plans.map(plan => {
         // Ensure endLocation is set to the last stop if not already set
         let endLocation = plan.endLocation;
@@ -455,7 +474,7 @@ const PlanManager = () => {
           </Card>
 
           {/* Weather Card */}
-          {currentWeather && (
+          {currentWeather ? (
             <Card className="mt-4">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -469,13 +488,13 @@ const PlanManager = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground">📅 อัปเดตล่าสุด: 09:15 น.</p>
+                    <p className="text-sm text-muted-foreground">📅 อัปเดตล่าสุด: {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</p>
                     <p className="text-sm font-medium text-foreground">{currentWeather.forecast}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          )}
+          ) : null}
         </div>
       </div>
       
