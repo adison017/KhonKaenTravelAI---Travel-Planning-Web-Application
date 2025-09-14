@@ -3,7 +3,7 @@
 
 export interface WeatherData {
   date: string;
-  temp: number;
+  temp: number; // Temperature in Celsius
   condition: string;
   humidity: number;
   wind: number;
@@ -14,9 +14,9 @@ export interface WeatherData {
   icon?: string;
   pressure?: number;
   visibility?: number;
-  feels_like?: number;
-  temp_min?: number;
-  temp_max?: number;
+  feels_like?: number; // Temperature in Celsius
+  temp_min?: number; // Temperature in Celsius
+  temp_max?: number; // Temperature in Celsius
   clouds?: number;
   dt?: number;
   dt_txt?: string;

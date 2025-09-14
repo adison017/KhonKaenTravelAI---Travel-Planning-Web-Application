@@ -85,6 +85,9 @@ const DayDetailsModal = ({
                     <div className="mt-3 pt-3 border-t">
                       <p className="font-medium">📢 คำแนะนำ:</p>
                       <p className="text-sm">{weather.forecast}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        📅 อัปเดตล่าสุด: {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                      </p>
                     </div>
                   )}
                 </CardContent>

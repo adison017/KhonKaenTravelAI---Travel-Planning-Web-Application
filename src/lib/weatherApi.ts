@@ -2,13 +2,15 @@
 const RAPIDAPI_KEY = '554d58f9camsh3e8d343e5db1ccep163327jsn553f0f626807';
 const RAPIDAPI_HOST = 'open-weather13.p.rapidapi.com';
 
-interface WeatherForecast {
+export interface WeatherForecast {
   date: string;
   temp: number;
   condition: string;
   humidity: number;
   wind: number;
   forecast: string;
+  dt?: number; // Unix timestamp
+  dt_txt?: string; // Human readable timestamp
 }
 
 /**
@@ -27,7 +29,10 @@ export const fetchWeatherForecast = async (
     const latitude = 16.4419;
     const longitude = 102.8397;
     
+    // Request temperature in Kelvin (default) and convert to Celsius in the code
     const url = `https://open-weather13.p.rapidapi.com/fivedaysforcast?latitude=${latitude}&longitude=${longitude}&lang=EN`;
+    
+    console.log(`Fetching weather data from: ${url}`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -37,11 +42,16 @@ export const fetchWeatherForecast = async (
       }
     });
     
+    console.log(`Weather API response status: ${response.status}`);
+    
     if (!response.ok) {
-      throw new Error(`Weather API request failed with status ${response.status}`);
+      const errorText = await response.text();
+      console.error(`Weather API request failed with status ${response.status}: ${errorText}`);
+      throw new Error(`Weather API request failed with status ${response.status}: ${errorText}`);
     }
     
     const data = await response.json();
+    console.log("Weather API response data:", JSON.stringify(data, null, 2));
     
     // Parse the weather data for the date range
     const weatherData: WeatherForecast[] = [];
@@ -60,17 +70,23 @@ export const fetchWeatherForecast = async (
         const date = new Date(start);
         date.setDate(start.getDate() + i);
         
+        // Convert Kelvin to Celsius (Kelvin - 273.15)
+        const tempInCelsius = forecast.main.temp - 273.15;
+        
         weatherData.push({
           date: date.toISOString().split('T')[0],
-          temp: Math.round(forecast.main.temp),
+          temp: Math.round(tempInCelsius),
           condition: forecast.weather[0].description,
           humidity: forecast.main.humidity,
           wind: Math.round(forecast.wind.speed * 3.6), // Convert m/s to km/h
-          forecast: getWeatherRecommendation(forecast.weather[0].main)
+          forecast: getWeatherRecommendation(forecast.weather[0].main),
+          dt: forecast.dt, // Unix timestamp
+          dt_txt: forecast.dt ? new Date(forecast.dt * 1000).toLocaleString('th-TH') : undefined // Human readable timestamp
         });
       }
     }
     
+    console.log("Processed weather data:", weatherData);
     return weatherData;
   } catch (error) {
     console.error('Error fetching weather data:', error);
@@ -104,6 +120,8 @@ const getWeatherRecommendation = (condition: string): string => {
  * Generate mock weather data for testing
  */
 const getMockWeatherData = (startDate: string, endDate: string): WeatherForecast[] => {
+  console.log("Using mock weather data due to API error");
+  
   const weatherData: WeatherForecast[] = [];
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -112,6 +130,7 @@ const getMockWeatherData = (startDate: string, endDate: string): WeatherForecast
   // Limit to 5 days to match API constraints
   const maxDays = Math.min(5, daysDiff);
   
+  // Use realistic Celsius temperatures for Khon Kaen (typically 25-35°C)
   const conditions = [
     { temp: 32, condition: "แดดจัด", humidity: 65, wind: 8, forecast: "อากาศร้อน แนะนำดื่มน้ำบ่อย" },
     { temp: 30, condition: "เมฆบางส่วน", humidity: 70, wind: 6, forecast: "เหมาะสำหรับเดินเล่นกลางแจ้ง" },
@@ -128,7 +147,9 @@ const getMockWeatherData = (startDate: string, endDate: string): WeatherForecast
     
     weatherData.push({
       date: date.toISOString().split('T')[0],
-      ...randomCondition
+      ...randomCondition,
+      dt: Math.floor(Date.now() / 1000), // Add current timestamp for mock data
+      dt_txt: new Date().toString() // Add current time string for mock data
     });
   }
   
