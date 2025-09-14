@@ -56,88 +56,9 @@ const PlanManager = () => {
         return savedCollection.plans || [];
       }
     }
-    
-    // Default plans if nothing in localStorage
-    return [
-      {
-        day: 1,
-        startLocation: "บ้านพักในตัวเมืองขอนแก่น",
-        endLocation: "สวนสาธารณะศรีมหาโพธิ",
-        transportation: "รถส่วนตัว",
-        accommodation: "บ้านพักในตัวเมืองขอนแก่น (1,200 บาท/คืน)",
-        stops: [
-          {
-            name: "หอศิลปวัฒนธรรมแห่งจังหวัดขอนแก่น",
-            timeStart: "09:00",
-            timeEnd: "10:30",
-            description: "ชมนิทรรศการศิลปะพื้นบ้าน"
-          },
-          {
-            name: "ตลาดเหนือ",
-            timeStart: "11:00",
-            timeEnd: "12:00",
-            description: "ชิมข้าวเหนียวหมูปิ้งและน้ำตกแตงโม"
-          }
-        ],
-        activities: [
-          {
-            title: "เยี่ยมชมสวนสาธารณะศรีมหาโพธิ",
-            date: "2025-04-10",
-            timeStart: "08:00",
-            timeEnd: "10:00",
-            description: "เดินเล่นรับลมเย็น ชมพระพุทธรูปใหญ่และทะเลสาบ",
-            cost: 0,
-            type: "ธรรมชาติ"
-          },
-          {
-            title: "ทานข้าวเหนียวหมูปิ้งที่ตลาดเหนือ",
-            date: "2025-04-10",
-            timeStart: "12:30",
-            timeEnd: "13:30",
-            description: "ของดีขอนแก่น พร้อมน้ำตกแตงโมสด — ร้านอร่อยติดอันดับ",
-            cost: 80,
-            type: "อาหารท้องถิ่น"
-          },
-          {
-            title: "เที่ยวหอศิลปวัฒนธรรมแห่งจังหวัดขอนแก่น",
-            date: "2025-04-10",
-            timeStart: "15:00",
-            timeEnd: "17:00",
-            description: "ชมงานศิลปะพื้นบ้านและนิทรรศการชั่วคราว",
-            cost: 50,
-            type: "วัฒนธรรม"
-          }
-        ]
-      },
-      {
-        day: 2,
-        startLocation: "บ้านพักในตัวเมืองขอนแก่น",
-        endLocation: "ถนนคนเดินขอนแก่น",
-        transportation: "รถส่วนตัว",
-        accommodation: "บ้านพักในตัวเมืองขอนแก่น (1,200 บาท/คืน)",
-        stops: [],
-        activities: [
-          {
-            title: "เดินเล่นถนนคนเดินขอนแก่น",
-            date: "2025-04-11",
-            timeStart: "17:00",
-            timeEnd: "20:00",
-            description: "ซื้อของที่ระลึก ทานอาหารเย็นและดื่มกาแฟ",
-            cost: 200,
-            type: "ช้อปปิ้ง"
-          }
-        ]
-      },
-      {
-        day: 3,
-        startLocation: "",
-        endLocation: "",
-        transportation: "",
-        accommodation: "",
-        stops: [],
-        activities: []
-      }
-    ];
+
+    // Return empty plans if nothing in localStorage
+    return [];
   });
   
   // Load collection data from localStorage or use defaults
@@ -209,9 +130,15 @@ const PlanManager = () => {
 
   const updatePlanTransportation = (day: number, startLocation: string, endLocation: string, transportation: string) => {
     setPlans(prevPlans => 
-      prevPlans.map(plan => 
-        plan.day === day ? { ...plan, startLocation, endLocation, transportation } : plan
-      )
+      prevPlans.map(plan => {
+        // If endLocation is not provided, use the last stop as endLocation
+        let finalEndLocation = endLocation;
+        if (!endLocation && plan.stops && plan.stops.length > 0) {
+          finalEndLocation = plan.stops[plan.stops.length - 1].name;
+        }
+        
+        return plan.day === day ? { ...plan, startLocation, endLocation: finalEndLocation, transportation } : plan;
+      })
     );
   };
 
@@ -231,23 +158,98 @@ const PlanManager = () => {
     );
   };
 
+  // Function to set start location in TransportTab
+  const setStartLocationForTransport = (location: string) => {
+    const currentPlan = plans.find(p => p.day === selectedDay);
+    if (currentPlan) {
+      updatePlanTransportation(
+        selectedDay, 
+        location, 
+        currentPlan.endLocation || "", 
+        currentPlan.transportation || ""
+      );
+    }
+  };
+
   // Save function to persist collection data
   const saveCollection = () => {
-    // Create collection data following the schema
+    // Load existing collection data or create default
+    let baseCollection;
+    if (id) {
+      const savedCollection = loadCollectionFromLocalStorage(id);
+      if (savedCollection) {
+        baseCollection = savedCollection;
+      }
+    }
+
+    // If no saved collection, use default
+    if (!baseCollection) {
+      baseCollection = {
+        collectionId: id || "",
+        name: "ทริปครอบครัวขอนแก่น 3 วัน",
+        category: "ครอบครัว",
+        startDate: "2025-04-10",
+        endDate: "2025-04-12",
+        budget: 9000,
+        weatherData: [
+          {
+            date: "2025-04-10",
+            temp: 32,
+            condition: "แดดจัด",
+            humidity: 65,
+            wind: 8,
+            forecast: "อากาศร้อน แนะนำดื่มน้ำบ่อย"
+          },
+          {
+            date: "2025-04-11",
+            temp: 30,
+            condition: "เมฆบางส่วน",
+            humidity: 70,
+            wind: 6,
+            forecast: "เหมาะสำหรับเดินเล่นกลางแจ้ง"
+          },
+          {
+            date: "2025-04-12",
+            temp: 29,
+            condition: "มีฝนเล็กน้อย",
+            humidity: 80,
+            wind: 5,
+            forecast: "พกร่มไว้ด้วย"
+          }
+        ],
+        plans: []
+      };
+    }
+
+    // Create collection data with current plans
     const collectionToSave = {
-      collectionId: collection.collectionId,
-      name: collection.name,
-      category: collection.category,
-      startDate: collection.startDate,
-      endDate: collection.endDate,
-      budget: collection.budget,
-      weatherData: collection.weatherData,
-      plans: plans
+      ...baseCollection,
+      plans: plans.map(plan => {
+        // Ensure endLocation is set to the last stop if not already set
+        let endLocation = plan.endLocation;
+        if (!endLocation && plan.stops && plan.stops.length > 0) {
+          endLocation = plan.stops[plan.stops.length - 1].name;
+        }
+
+        // Ensure startLocation is not set to accommodation by default
+        // Start location should be from stops or current position only
+        let startLocation = plan.startLocation;
+        if (startLocation.includes("บ้านพัก") || startLocation.includes("ที่พัก")) {
+          // If start location was previously set to accommodation, reset it
+          startLocation = "";
+        }
+
+        return {
+          ...plan,
+          startLocation,
+          endLocation
+        };
+      })
     };
-    
+
     // Save to localStorage using utility function
     saveCollectionToLocalStorage(collectionToSave);
-    
+
     // Show a success message
     alert("บันทึกข้อมูลสำเร็จ!");
   };
@@ -291,19 +293,15 @@ const PlanManager = () => {
       <header className="bg-white/95 backdrop-blur-md border-b border-border/50 sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-3 animate-fade-in">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="hover:scale-105 transition-transform font-prompt">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/my-collections')} className="hover:scale-105 transition-transform font-prompt">
               <ArrowLeft className="w-4 h-4" />
-              ← กลับสู่หน้าหลัก
+              ← กลับสู่หน้าทริป
             </Button>
             <span className="text-3xl animate-float">🌿</span>
             <div className="flex-1">
               <h1 className="text-xl font-bold text-foreground font-kanit">KhonKaenTravelAI</h1>
               <p className="text-xs text-muted-foreground font-sarabun">จัดการแผนการท่องเที่ยว</p>
             </div>
-            <Button variant="khonkaen" onClick={saveCollection} className="flex items-center gap-2">
-              <Save className="w-4 h-4" />
-              บันทึกข้อมูล
-            </Button>
           </div>
         </div>
       </header>
@@ -394,20 +392,28 @@ const PlanManager = () => {
 
             {/* Places Tab */}
             <TabsContent value="places" className="space-y-4">
-              <PlacesTab 
-                currentPlan={currentPlan} 
-                onUpdateStops={(stops) => updatePlanStops(selectedDay, stops)}
+              <PlacesTab
+                currentPlan={currentPlan}
+                onUpdateStops={(stops) => {
+                  updatePlanStops(selectedDay, stops);
+                  // Auto-save to localStorage after updating
+                  setTimeout(() => saveCollection(), 100);
+                }}
                 collectionId={id}
                 selectedDay={selectedDay}
+                onSetStartLocation={setStartLocationForTransport}
               />
             </TabsContent>
 
             {/* Transport Tab */}
             <TabsContent value="transport" className="space-y-4">
-              <TransportTab 
-                currentPlan={currentPlan} 
-                onUpdateTransportation={(startLocation, endLocation, transportation) => 
-                  updatePlanTransportation(selectedDay, startLocation, endLocation, transportation)}
+              <TransportTab
+                currentPlan={currentPlan}
+                onUpdateTransportation={(startLocation, endLocation, transportation) => {
+                  updatePlanTransportation(selectedDay, startLocation, endLocation, transportation);
+                  // Auto-save to localStorage after updating
+                  setTimeout(() => saveCollection(), 100);
+                }}
                 collectionId={id}
                 selectedDay={selectedDay}
               />
@@ -415,8 +421,8 @@ const PlanManager = () => {
 
             {/* Accommodation Tab */}
             <TabsContent value="accommodation" className="space-y-4">
-              <AccommodationTab 
-                currentPlan={currentPlan} 
+              <AccommodationTab
+                currentPlan={currentPlan}
                 onUpdateAccommodation={(accommodation) => updatePlanAccommodation(selectedDay, accommodation)}
                 collectionId={id}
                 selectedDay={selectedDay}
@@ -425,8 +431,8 @@ const PlanManager = () => {
 
             {/* Activities Tab */}
             <TabsContent value="activities" className="space-y-4">
-              <ActivitiesTab 
-                currentPlan={currentPlan} 
+              <ActivitiesTab
+                currentPlan={currentPlan}
                 onUpdateActivities={(activities) => updatePlanActivities(selectedDay, activities)}
                 collectionId={id}
                 selectedDay={selectedDay}

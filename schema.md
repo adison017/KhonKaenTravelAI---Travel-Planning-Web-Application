@@ -1,5 +1,65 @@
 # KhonKaenTravelAI Data Schema
 
+## Collection
+- `collectionId`: Unique identifier for the collection
+- `name`: Name of the travel collection
+- `category`: Category of the trip (e.g., ครอบครัว, เพื่อน, คนรัก)
+- `startDate`: Start date of the trip (YYYY-MM-DD)
+- `endDate`: End date of the trip (YYYY-MM-DD)
+- `budget`: Total budget for the trip (in THB)
+- `weatherData`: Array of weather information for each day
+- `plans`: Array of daily plans
+
+### Weather Data (per day)
+- `date`: Date of the weather data (YYYY-MM-DD)
+- `temp`: Temperature in Celsius
+- `condition`: Weather condition description
+- `humidity`: Humidity percentage
+- `wind`: Wind speed in km/h
+- `forecast`: Weather forecast description
+- Additional detailed fields from OpenWeatherMap API:
+  - `main`: Main weather condition
+  - `description`: Detailed weather description
+  - `icon`: Weather icon code
+  - `pressure`: Atmospheric pressure
+  - `visibility`: Visibility distance
+  - `feels_like`: Temperature feels like
+  - `temp_min`: Minimum temperature
+  - `temp_max`: Maximum temperature
+  - `clouds`: Cloud coverage percentage
+  - `dt`: Timestamp
+  - `dt_txt`: Date/time string
+
+### Plan (per day)
+- `day`: Day number of the trip (1, 2, 3, etc.)
+- `startLocation`: Starting location for the day (should be a place/location or current position, NOT accommodation)
+- `endLocation`: Ending location for the day (should be set to the last stop in the stops array)
+- `transportation`: Transportation method for the day
+- `accommodation`: Accommodation information for the day (separate from start/end locations)
+- `stops`: Array of stops/destinations for the day
+- `activities`: Array of activities for the day
+
+### Stop
+- `name`: Name of the stop/location
+- `timeStart`: Start time (HH:MM)
+- `timeEnd`: End time (HH:MM)
+- `description`: Description of the stop
+
+### Activity
+- `title`: Title of the activity
+- `date`: Date of the activity (YYYY-MM-DD)
+- `timeStart`: Start time (HH:MM)
+- `timeEnd`: End time (HH:MM)
+- `description`: Description of the activity
+- `cost`: Cost of the activity (in THB)
+- `type`: Type of activity (e.g., ธรรมชาติ, วัฒนธรรม, อาหารท้องถิ่น)
+- `location`: Location of the activity (optional)
+
+## Example Data
+
+```
+# KhonKaenTravelAI Data Schema
+
 This document describes the data structure used to store travel plan information in localStorage for the KhonKaenTravelAI application.
 
 ## Collection Structure
@@ -88,8 +148,8 @@ The application may also store more detailed weather data from OpenWeatherMap AP
 
 ### Plan (per day)
 - `day`: Day number of the trip (1, 2, 3, etc.)
-- `startLocation`: Starting location for the day
-- `endLocation`: Ending location for the day
+- `startLocation`: Starting location for the day (should be a place/location, not accommodation)
+- `endLocation`: Ending location for the day (should be set to the last stop in the stops array)
 - `transportation`: Transportation method for the day
 - `accommodation`: Accommodation information for the day
 - `stops`: Array of locations to visit during the day with time information
@@ -111,7 +171,7 @@ The application may also store more detailed weather data from OpenWeatherMap AP
 
 ## Example Data
 
-```json
+```
 {
   "collectionId": "trip-12345",
   "name": "ทริปครอบครัวขอนแก่น 3 วัน",
@@ -132,8 +192,8 @@ The application may also store more detailed weather data from OpenWeatherMap AP
   "plans": [
     {
       "day": 1,
-      "startLocation": "บ้านพักในตัวเมืองขอนแก่น",
-      "endLocation": "สวนสาธารณะศรีมหาโพธิ",
+      "startLocation": "บ้านพักในตัวเมืองขอนแก่น",  // Should be a place/location, not accommodation
+      "endLocation": "ตลาดเหนือ",  // Set to the last stop in the stops array
       "transportation": "รถส่วนตัว",
       "accommodation": "บ้านพักในตัวเมืองขอนแก่น (1,200 บาท/คืน)",
       "stops": [
