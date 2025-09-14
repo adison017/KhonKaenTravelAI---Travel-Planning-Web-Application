@@ -50,7 +50,7 @@ export interface Plan {
   activities: Activity[];
 }
 
-interface Collection {
+export interface Collection {
   collectionId: string;
   name: string;
   category: string;

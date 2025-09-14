@@ -163,12 +163,31 @@ const PlanManager = () => {
     const currentPlan = plans.find(p => p.day === selectedDay);
     if (currentPlan) {
       updatePlanTransportation(
-        selectedDay, 
-        location, 
-        currentPlan.endLocation || "", 
+        selectedDay,
+        location,
+        currentPlan.endLocation || "",
         currentPlan.transportation || ""
       );
     }
+  };
+
+  // Function to add a new day
+  const addNewDay = () => {
+    const maxDay = plans.length > 0 ? Math.max(...plans.map(p => p.day)) : 0;
+    const newDayNumber = maxDay + 1;
+
+    const newPlan: Plan = {
+      day: newDayNumber,
+      startLocation: "",
+      endLocation: "",
+      transportation: "",
+      accommodation: "",
+      stops: [],
+      activities: []
+    };
+
+    setPlans(prevPlans => [...prevPlans, newPlan]);
+    setSelectedDay(newDayNumber);
   };
 
   // Save function to persist collection data
@@ -318,10 +337,10 @@ const PlanManager = () => {
           <div className="space-y-2">
             <h4 className="font-medium text-sm text-muted-foreground">วันที่ในทริป</h4>
             <div className="space-y-2">
-              {collection.plans.map((plan) => {
+              {plans.map((plan) => {
                 const status = getDayStatus(plan.day);
                 return (
-                  <Card 
+                  <Card
                     key={plan.day}
                     className={cn(
                       "cursor-pointer transition-all duration-200 hover:shadow-md",
@@ -356,9 +375,9 @@ const PlanManager = () => {
                 );
               })}
               
-              <Button variant="hero" size="sm" className="w-full">
+              <Button variant="hero" size="sm" className="w-full" onClick={addNewDay}>
                 <Plus className="w-4 h-4" />
-                ➕ เพิ่ม Day…
+                เพิ่ม Day…
               </Button>
             </div>
           </div>
