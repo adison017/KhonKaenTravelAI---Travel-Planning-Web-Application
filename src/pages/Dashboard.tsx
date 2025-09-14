@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Calendar, MapPin, DollarSign, Cloud, Eye, Edit3, Sparkles, Mountain, TreePine } from "lucide-react";
+import { Plus, Calendar, MapPin, DollarSign, Cloud, Eye, Edit3, Sparkles, Mountain, TreePine, Utensils } from "lucide-react";
 import khonkaenHero from "@/assets/khonkaen-hero.jpg";
 
 interface TripCollection {
@@ -143,7 +143,7 @@ const Dashboard = () => {
             <p className="text-xl md:text-2xl text-white/90 font-sarabun drop-shadow-md">
               เก็บเกี่ยวประสบการณ์ วางแผนอย่างชาญฉลาด ด้วย AI
             </p>
-            <div className="pt-4">
+            <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 variant="hero" 
                 size="xl" 
@@ -153,6 +153,16 @@ const Dashboard = () => {
                 <Plus className="w-6 h-6" />
                 สร้างทริปใหม่
                 <Sparkles className="w-5 h-5 ml-2" />
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="xl" 
+                onClick={() => navigate('/restaurant-search')}
+                className="font-prompt animate-glow hover:scale-110 transition-all duration-300 shadow-2xl bg-khonkaen-warm/90 hover:bg-khonkaen-warm text-white border-0"
+              >
+                <Utensils className="w-6 h-6" />
+                ร้านอาหารใกล้ฉัน
+                <span className="text-lg ml-2">🍜</span>
               </Button>
             </div>
           </div>

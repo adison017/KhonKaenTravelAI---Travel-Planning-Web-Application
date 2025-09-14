@@ -129,6 +129,53 @@ class GoogleMapsService {
   getDirectionsRenderer(): google.maps.DirectionsRenderer | null {
     return this.directionsRenderer;
   }
+
+  async searchNearbyRestaurants(
+    location: google.maps.LatLng,
+    radius: number = 5000,
+    type: string = 'restaurant'
+  ): Promise<google.maps.places.PlaceResult[]> {
+    if (!this.placesService) {
+      throw new Error("Places service not initialized. Call initializePlacesServices() first.");
+    }
+
+    return new Promise((resolve, reject) => {
+      const request: google.maps.places.PlaceSearchRequest = {
+        location,
+        radius,
+        type: type as any,
+      };
+
+      this.placesService!.nearbySearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+          resolve(results);
+        } else {
+          reject(new Error(`Nearby search failed with status: ${status}`));
+        }
+      });
+    });
+  }
+
+  async getPlaceDetails(placeId: string): Promise<google.maps.places.PlaceResult> {
+    if (!this.placesService) {
+      throw new Error("Places service not initialized. Call initializePlacesServices() first.");
+    }
+
+    return new Promise((resolve, reject) => {
+      const request: google.maps.places.PlaceDetailsRequest = {
+        placeId,
+        fields: ['name', 'rating', 'price_level', 'opening_hours', 'vicinity', 'geometry', 'photos', 'formatted_phone_number', 'website']
+      };
+
+      this.placesService!.getDetails(request, (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+          resolve(place);
+        } else {
+          reject(new Error(`Place details request failed with status: ${status}`));
+        }
+      });
+    });
+  }
 }
 
 // Export a singleton instance
