@@ -344,10 +344,10 @@ const PlanManager = () => {
         </div>
       </header>
 
-      {/* Main Layout */}
-      <div className="flex w-full min-h-[calc(100vh-80px)]">
-        {/* Sidebar */}
-        <div className="w-60 bg-white/50 border-r border-border/50 p-4 space-y-4">
+      {/* Main Layout - Responsive for mobile */}
+      <div className="flex w-full min-h-[calc(100vh-80px)] flex-col md:flex-row">
+        {/* Sidebar - Responsive for mobile */}
+        <div className="w-full md:w-60 bg-white/50 border-b md:border-b-0 md:border-r border-border/50 p-4 space-y-4 md:min-h-[calc(100vh-80px)]">
           <div className="space-y-2">
             <h3 className="font-semibold text-sm text-muted-foreground">ทริป:</h3>
             <p className="font-medium text-foreground">{collection.name}</p>
@@ -403,10 +403,10 @@ const PlanManager = () => {
         </div>
 
         {/* Main Panel */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 md:p-6">
           {/* Day Header */}
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <h2 className="text-2xl font-bold text-foreground">
                 🎯 DAY {selectedDay} — {formatDate(collection.startDate, selectedDay)}
               </h2>
@@ -492,11 +492,11 @@ const PlanManager = () => {
             </CardContent>
           </Card>
 
-          {/* Weather Card */}
+          {/* Weather Card - Responsive layout */}
           {currentWeather ? (
             <Card className="mt-4">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <span className="text-2xl">{getWeatherIcon(currentWeather.condition)}</span>
                     <div>

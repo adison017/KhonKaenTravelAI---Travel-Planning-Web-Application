@@ -46,7 +46,7 @@ const DayDetailsModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent className="max-w-3xl max-h-[80vh] w-[95vw] md:w-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
             📅 DAY {day} — {formatDate(startDate, day)}
@@ -55,12 +55,12 @@ const DayDetailsModal = ({
         
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-6">
-            {/* Weather Section */}
+            {/* Weather Section - Responsive layout */}
             {weather && (
               <Card>
                 <CardContent className="pt-6">
                   <h3 className="text-lg font-semibold mb-3">🌤️ สภาพอากาศ</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">{getWeatherIcon(weather.condition)}</span>
                       <div>
