@@ -42,8 +42,8 @@ export interface Stop {
 
 export interface Plan {
   day: number;
-  startLocation: string;
-  endLocation: string;
+  startLocation: string; // Should be a place/location or current position, not accommodation
+  endLocation: string; // Should be set to the last stop in the stops array
   transportation: string;
   accommodation: string;
   stops: Stop[];

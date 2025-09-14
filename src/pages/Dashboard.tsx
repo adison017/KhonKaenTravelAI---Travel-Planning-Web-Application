@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Calendar, MapPin, DollarSign, Cloud, Eye, Edit3, Sparkles, Mountain, TreePine, Utensils, Camera } from "lucide-react";
+import { listCollectionIds, loadCollectionFromLocalStorage } from "@/lib/storage";
 import khonkaenHero from "@/assets/khonkaen-hero.jpg";
 
 interface TripCollection {
@@ -24,44 +25,42 @@ interface TripCollection {
 const Dashboard = () => {
   const navigate = useNavigate();
   
-  // Mock data for demo
-  const [collections] = useState<TripCollection[]>([
-    {
-      id: "ck123abc",
-      name: "ทริปครอบครัวขอนแก่น 3 วัน",
-      category: "ครอบครัว",
-      startDate: "2025-04-10",
-      endDate: "2025-04-12",
-      budget: 9000,
-      weatherToday: { temp: 32, condition: "แดดจัด" },
-      totalDays: 3,
-      totalActivities: 8,
-      hasPlans: true
-    },
-    {
-      id: "ck456def",
-      name: "ทริปเพื่อนฝูง 2 วัน — ขอนแก่น-มหาวิทยาลัยขอนแก่น",
-      category: "เพื่อนฝูง",
-      startDate: "2025-04-15",
-      endDate: "2025-04-16",
-      budget: 6500,
-      weatherToday: { temp: 29, condition: "มีฝนเล็กน้อย" },
-      totalDays: 2,
-      totalActivities: 5,
-      hasPlans: true
-    },
-    {
-      id: "ck789ghi",
-      name: "ทริปคนเดียว — ตลาดเหนือ & หอศิลป์",
-      category: "คนเดียว",
-      startDate: "2025-04-20",
-      endDate: "2025-04-20",
-      budget: 4000,
-      totalDays: 1,
-      totalActivities: 0,
-      hasPlans: false
+  // Load collections from localStorage
+  const [collections] = useState<TripCollection[]>(() => {
+    try {
+      const collectionIds = listCollectionIds();
+      const loadedCollections: TripCollection[] = [];
+
+      collectionIds.forEach(id => {
+        const collectionData = loadCollectionFromLocalStorage(id);
+        if (collectionData) {
+          // Calculate total activities
+          const totalActivities = collectionData.plans.reduce(
+            (total, plan) => total + plan.activities.length,
+            0
+          );
+
+          loadedCollections.push({
+            id: collectionData.collectionId,
+            name: collectionData.name,
+            category: collectionData.category,
+            startDate: collectionData.startDate,
+            endDate: collectionData.endDate,
+            budget: collectionData.budget,
+            weatherToday: undefined, // Will be populated from weather data if available
+            totalDays: collectionData.plans.length,
+            totalActivities,
+            hasPlans: collectionData.plans.length > 0
+          });
+        }
+      });
+
+      return loadedCollections;
+    } catch (error) {
+      console.error("Error loading collections:", error);
+      return [];
     }
-  ]);
+  });
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -112,6 +111,14 @@ const Dashboard = () => {
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="sm" className="font-prompt hover:scale-105 transition-transform">
                 🔍 ค้นหา
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="font-prompt hover:scale-105 transition-transform"
+                onClick={() => navigate('/my-collections')}
+              >
+                📁 ทริปของฉัน
               </Button>
               <Button variant="ghost" size="sm" className="font-prompt hover:scale-105 transition-transform">
                 👤 โปรไฟล์

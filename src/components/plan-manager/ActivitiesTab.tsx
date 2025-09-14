@@ -1,11 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Plus, MapPin, Search, X } from "lucide-react";
-import { googleMapsService } from "@/lib/google-maps";
+import { Calendar, Plus, MapPin, X, Clock, Edit } from "lucide-react";
 import { loadCollectionFromLocalStorage } from "@/lib/storage";
+
+interface Stop {
+  name: string;
+  timeStart: string;
+  timeEnd: string;
+  description?: string;
+}
 
 interface Activity {
   title: string;
@@ -15,55 +21,35 @@ interface Activity {
   description: string;
   cost: number;
   type: string;
-  location?: string; // Add location field
+  location?: string;
 }
 
 interface Plan {
+  day: number;
+  startLocation: string;
+  endLocation: string;
+  transportation: string;
+  accommodation: string;
+  stops: Stop[];
   activities: Activity[];
 }
 
+interface Collection {
+  collectionId: string;
+  name: string;
+  category: string;
+  startDate: string;
+  endDate: string;
+  budget: number;
+  plans: Plan[];
+}
+
 interface ActivitiesTabProps {
-  currentPlan: Plan | undefined;
+  currentPlan?: Plan;
   onUpdateActivities?: (activities: Activity[]) => void;
   collectionId?: string;
   selectedDay?: number;
 }
-
-// Function to calculate duration between two times in HH:MM format
-const calculateDuration = (startTime: string, endTime: string): string => {
-  if (!startTime || !endTime) return "";
-  
-  try {
-    const [startHours, startMinutes] = startTime.split(":").map(Number);
-    const [endHours, endMinutes] = endTime.split(":").map(Number);
-    
-    let startTotalMinutes = startHours * 60 + startMinutes;
-    let endTotalMinutes = endHours * 60 + endMinutes;
-    
-    // Handle case where end time is next day (e.g., 23:00 to 01:00)
-    if (endTotalMinutes < startTotalMinutes) {
-      endTotalMinutes += 24 * 60; // Add 24 hours in minutes
-    }
-    
-    const durationMinutes = endTotalMinutes - startTotalMinutes;
-    
-    if (durationMinutes < 0) return "";
-    
-    const hours = Math.floor(durationMinutes / 60);
-    const minutes = durationMinutes % 60;
-    
-    if (hours === 0) {
-      return `${minutes} นาที`;
-    } else if (minutes === 0) {
-      return `${hours} ชั่วโมง`;
-    } else {
-      return `${hours} ชั่วโมง ${minutes} นาที`;
-    }
-  } catch (error) {
-    console.error("Error calculating duration:", error);
-    return "";
-  }
-};
 
 const getActivityTypeIcon = (type: string) => {
   switch (type) {
@@ -78,104 +64,89 @@ const getActivityTypeIcon = (type: string) => {
 };
 
 const ActivitiesTab = ({ currentPlan, onUpdateActivities, collectionId, selectedDay }: ActivitiesTabProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<google.maps.places.AutocompletePrediction[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [newActivity, setNewActivity] = useState<Omit<Activity, 'location'>>({
+  const [selectedStop, setSelectedStop] = useState<Stop | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<{activity: Activity, index: number} | null>(null);
+  const [newActivity, setNewActivity] = useState<Activity>({
     title: "",
     date: new Date().toISOString().split('T')[0],
     timeStart: "",
     timeEnd: "",
     description: "",
     cost: 0,
-    type: "ธรรมชาติ"
+    type: "ธรรมชาติ",
+    location: ""
   });
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [localStorageData, setLocalStorageData] = useState<any>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const initMap = async () => {
-      try {
-        await googleMapsService.load();
-        if (mapRef.current) {
-          const map = googleMapsService.initializeMap(mapRef.current);
-          googleMapsService.initializePlacesServices(map);
-        }
-      } catch (error) {
-        console.error("Error initializing Google Maps:", error);
-      }
-    };
+  const handleStopSelect = (stop: Stop) => {
+    setSelectedStop(stop);
+    setEditingActivity(null); // Clear editing state when selecting a stop
+    setNewActivity(prev => ({
+      ...prev,
+      title: `กิจกรรมที่ ${stop.name}`,
+      location: stop.name,
+      timeStart: stop.timeStart,
+      timeEnd: stop.timeEnd,
+      description: stop.description || ""
+    }));
+    setShowAddForm(true);
+  };
 
-    initMap();
-  }, []);
-
-  // Load localStorage data when component mounts
-  useEffect(() => {
-    if (collectionId && selectedDay) {
-      const data = loadCollectionFromLocalStorage(collectionId);
-      setLocalStorageData(data);
-    }
-  }, [collectionId, selectedDay]);
-
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) return;
-    
-    setIsSearching(true);
-    try {
-      const results = await googleMapsService.searchPlaces(searchTerm + " ขอนแก่น");
-      setSearchResults(results);
-    } catch (error) {
-      console.error("Error searching activities:", error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
+  const handleEditActivity = (activity: Activity, index: number) => {
+    setEditingActivity({ activity, index });
+    setSelectedStop(null); // Clear selected stop when editing
+    setNewActivity({ ...activity });
+    setShowAddForm(true);
   };
 
   const handleAddActivity = () => {
-    if (onUpdateActivities && currentPlan) {
-      const activityToAdd: Activity = {
-        ...newActivity,
-        location: searchTerm || undefined
-      };
-      
-      const newActivities = [...currentPlan.activities, activityToAdd];
-      onUpdateActivities(newActivities);
-      
-      // Reset form
-      setNewActivity({
-        title: "",
-        date: new Date().toISOString().split('T')[0],
-        timeStart: "",
-        timeEnd: "",
-        description: "",
-        cost: 0,
-        type: "ธรรมชาติ"
-      });
-      setSearchTerm("");
-      setSearchResults([]);
-      setShowAddForm(false);
+    if (!currentPlan || !onUpdateActivities) return;
+
+    const activityToSave: Activity = {
+      ...newActivity,
+      date: new Date().toISOString().split('T')[0]
+    };
+
+    let newActivities: Activity[];
+
+    if (editingActivity) {
+      // Update existing activity
+      newActivities = [...currentPlan.activities];
+      newActivities[editingActivity.index] = activityToSave;
+    } else {
+      // Add new activity
+      newActivities = [...currentPlan.activities, activityToSave];
     }
+
+    onUpdateActivities(newActivities);
+
+    // Reset form
+    setNewActivity({
+      title: "",
+      date: new Date().toISOString().split('T')[0],
+      timeStart: "",
+      timeEnd: "",
+      description: "",
+      cost: 0,
+      type: "ธรรมชาติ",
+      location: ""
+    });
+    setSelectedStop(null);
+    setEditingActivity(null);
+    setShowAddForm(false);
   };
 
   const handleRemoveActivity = (index: number) => {
-    if (onUpdateActivities && currentPlan) {
-      const newActivities = currentPlan.activities.filter((_, i) => i !== index);
-      onUpdateActivities(newActivities);
-    }
+    if (!currentPlan || !onUpdateActivities) return;
+    const newActivities = currentPlan.activities.filter((_, i) => i !== index);
+    onUpdateActivities(newActivities);
   };
 
-  const handleUpdateNewActivity = (field: keyof Omit<Activity, 'location'>, value: string | number) => {
+  const handleUpdateNewActivity = (field: keyof Activity, value: string | number) => {
     setNewActivity(prev => ({
       ...prev,
       [field]: value
     }));
-  };
-
-  const handleSave = () => {
-    // In a real implementation, this might trigger additional actions
-    alert("บันทึกข้อมูลกิจกรรมสำเร็จ!");
   };
 
   return (
@@ -183,22 +154,63 @@ const ActivitiesTab = ({ currentPlan, onUpdateActivities, collectionId, selected
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="w-5 h-5" />
-          📌 กิจกรรมวันนี้ ({currentPlan?.activities.length || 0} รายการ)
+          📌 กิจกรรมวันนี้ - วันที่ {selectedDay}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* LocalStorage Data Display - Only for selected day */}
-        {localStorageData && selectedDay && (
-          <div className="text-xs text-muted-foreground mb-2">
-            แสดงข้อมูลจาก LocalStorage: {localStorageData.name} (Day {selectedDay})
+        {/* Stops Section */}
+        {currentPlan && currentPlan.stops.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="font-medium flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              จุดแวะพัก ({currentPlan.stops.length} จุด)
+            </h4>
+            <div className="grid gap-2">
+              {currentPlan.stops.map((stop, index) => (
+                <div key={index} className="p-3 bg-secondary/30 rounded-lg border border-border/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className="font-medium">{stop.name}</h5>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleStopSelect(stop)}
+                    >
+                      <Plus className="w-4 h-4" />
+                      เพิ่มกิจกรรม
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      {stop.timeStart} - {stop.timeEnd}
+                    </span>
+                  </div>
+                  {stop.description && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {stop.description}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {/* Add Activity Form */}
-        {showAddForm ? (
+        {showAddForm && (
           <div className="p-4 bg-secondary/30 rounded-lg border border-border/30 space-y-3">
-            <h4 className="font-medium">เพิ่มกิจกรรมใหม่</h4>
-            
+            <h4 className="font-medium">
+              {editingActivity ? "แก้ไขกิจกรรม" : "เพิ่มกิจกรรมใหม่"}
+            </h4>
+
+            {selectedStop && (
+              <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                <p className="text-sm text-blue-800">
+                  📍 เลือกจากจุดแวะพัก: {selectedStop.name}
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-sm">ชื่อกิจกรรม</label>
@@ -224,7 +236,7 @@ const ActivitiesTab = ({ currentPlan, onUpdateActivities, collectionId, selected
                 </select>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-sm">เวลาเริ่ม</label>
@@ -243,7 +255,7 @@ const ActivitiesTab = ({ currentPlan, onUpdateActivities, collectionId, selected
                 />
               </div>
             </div>
-            
+
             <div>
               <label className="text-sm">ค่าใช้จ่าย (บาท)</label>
               <Input
@@ -252,7 +264,7 @@ const ActivitiesTab = ({ currentPlan, onUpdateActivities, collectionId, selected
                 onChange={(e) => handleUpdateNewActivity('cost', parseInt(e.target.value) || 0)}
               />
             </div>
-            
+
             <div>
               <label className="text-sm">คำอธิบาย</label>
               <Input
@@ -261,39 +273,7 @@ const ActivitiesTab = ({ currentPlan, onUpdateActivities, collectionId, selected
                 placeholder="คำอธิบายกิจกรรม"
               />
             </div>
-            
-            {/* Location Search */}
-            <div className="space-y-2">
-              <label className="text-sm flex items-center gap-1">
-                <MapPin className="w-4 h-4" /> สถานที่
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="ค้นหาสถานที่ในขอนแก่น..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                />
-                <Button onClick={handleSearch} disabled={isSearching} size="sm">
-                  <Search className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              {searchResults.length > 0 && (
-                <div className="border rounded-md max-h-40 overflow-y-auto">
-                  {searchResults.map((result) => (
-                    <div 
-                      key={result.place_id}
-                      className="p-2 hover:bg-secondary cursor-pointer border-b last:border-b-0"
-                      onClick={() => setSearchTerm(result.description)}
-                    >
-                      <p className="text-sm">{result.description}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
+
             <div className="flex gap-2">
               <Button onClick={handleAddActivity} variant="khonkaen" size="sm">
                 บันทึก
@@ -303,66 +283,98 @@ const ActivitiesTab = ({ currentPlan, onUpdateActivities, collectionId, selected
               </Button>
             </div>
           </div>
-        ) : (
-          <div className="flex gap-2">
-            <Button 
-              variant="hero" 
-              className="flex-1"
-              onClick={() => setShowAddForm(true)}
-            >
-              <Plus className="w-4 h-4" />
-              ➕ เพิ่มกิจกรรมใหม่
-            </Button>
-            <Button 
-              variant="default" 
-              onClick={handleSave}
-            >
-              บันทึก
-            </Button>
+        )}
+
+        {/* Current Activities */}
+        {currentPlan && currentPlan.activities.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="font-medium">กิจกรรมที่วางแผน ({currentPlan.activities.length} รายการ)</h4>
+            {currentPlan.activities.map((activity, index) => (
+              <div key={index} className="p-4 bg-secondary/30 rounded-lg border border-border/30">
+                <div className="flex items-center justify-between mb-2">
+                  <h5 className="font-medium">▶ {activity.title}</h5>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditActivity(activity, index)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleRemoveActivity(index)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                  <span>🕐 {activity.timeStart}–{activity.timeEnd}</span>
+                  <span>💰 {activity.cost} บาท</span>
+                  <Badge variant="secondary">
+                    {getActivityTypeIcon(activity.type)} {activity.type}
+                  </Badge>
+                </div>
+                {activity.location && (
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+                    <MapPin className="w-4 h-4" />
+                    <span>{activity.location}</span>
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  ℹ️ {activity.description}
+                </p>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Map Preview */}
-        <div 
-          ref={mapRef} 
-          className="h-48 rounded-lg border"
-        />
+        {/* No stops message */}
+        {currentPlan && currentPlan.stops.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>ยังไม่มีจุดแวะพักสำหรับวันที่ {selectedDay}</p>
+            <p className="text-sm">กรุณาเพิ่มจุดแวะพักก่อนสร้างกิจกรรม</p>
+          </div>
+        )}
 
-        {/* Current Activities */}
-        {currentPlan?.activities.map((activity, index) => {
-          const duration = calculateDuration(activity.timeStart, activity.timeEnd);
-          return (
-            <div key={index} className="p-4 bg-secondary/30 rounded-lg border border-border/30">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium">▶ {activity.title}</h4>
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  onClick={() => handleRemoveActivity(index)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                <span>🕐 {activity.timeStart}–{activity.timeEnd}</span>
-                {duration && <span>⏱️ {duration}</span>}
-                <span>💰 {activity.cost} บาท</span>
-                <Badge variant="secondary">
-                  {getActivityTypeIcon(activity.type)} {activity.type}
-                </Badge>
-              </div>
-              {activity.location && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{activity.location}</span>
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground">
-                ℹ️ {activity.description}
-              </p>
-            </div>
-          );
-        })}
+        {/* Save Button */}
+        <div className="flex justify-end mt-4">
+          <Button onClick={() => {
+            if (onUpdateActivities && currentPlan) {
+              onUpdateActivities([...currentPlan.activities]);
+
+              const activitiesCount = currentPlan.activities.length;
+              let message = `บันทึกข้อมูลกิจกรรมเรียบร้อยแล้ว!\n\n`;
+              message += `📅 จำนวนกิจกรรม: ${activitiesCount} รายการ\n`;
+
+              if (activitiesCount > 0) {
+                message += `\n📋 รายการกิจกรรม:\n`;
+                currentPlan.activities.forEach((activity, index) => {
+                  message += `${index + 1}. ${activity.title}\n`;
+                  message += `   🕐 ${activity.timeStart} - ${activity.timeEnd}\n`;
+                  message += `   💰 ${activity.cost} บาท (${activity.type})\n`;
+                  if (activity.location) {
+                    message += `   📍 ${activity.location}\n`;
+                  }
+                  message += `\n`;
+                });
+
+                // Calculate total cost
+                const totalCost = currentPlan.activities.reduce((sum, activity) => sum + activity.cost, 0);
+                message += `💵 รวมค่าใช้จ่าย: ${totalCost} บาท`;
+              } else {
+                message += `\n⚠️ ยังไม่มีกิจกรรมในวันนี้`;
+              }
+
+              alert(message);
+            }
+          }} variant="khonkaen" size="lg">
+            บันทึกข้อมูลกิจกรรม
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
