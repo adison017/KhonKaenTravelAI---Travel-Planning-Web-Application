@@ -4,8 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, MapPin, Car, Hotel, Calendar } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import PlacesTab from "@/components/plan-manager/PlacesTab";
+import TransportTab from "@/components/plan-manager/TransportTab";
+import AccommodationTab from "@/components/plan-manager/AccommodationTab";
+import ActivitiesTab from "@/components/plan-manager/ActivitiesTab";
 
 interface Activity {
   title: string;
@@ -156,17 +160,7 @@ const PlanManager = () => {
     total + plan.activities.reduce((dayTotal, activity) => dayTotal + activity.cost, 0), 0
   );
 
-  const getActivityTypeIcon = (type: string) => {
-    switch (type) {
-      case "ธรรมชาติ": return "🌿";
-      case "อาหารท้องถิ่น": return "🍜";
-      case "วัฒนธรรม": return "🖼️";
-      case "ช้อปปิ้ง": return "🛍️";
-      case "ไนท์ไลฟ์": return "🌙";
-      case "ศาสนา": return "🙏";
-      default: return "📍";
-    }
-  };
+
 
   const getWeatherIcon = (condition: string) => {
     if (condition.includes("แดด")) return "☀️";
@@ -303,138 +297,22 @@ const PlanManager = () => {
 
             {/* Places Tab */}
             <TabsContent value="places" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="w-5 h-5" />
-                    📍 สถานที่ที่จะเยี่ยมชมในวันนี้
-                  </CardTitle>
-                  <CardDescription>
-                    ระบุจุดที่คุณอยากไปเที่ยว — นอกเหนือจากจุดเริ่ม/สิ้นสุด
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {currentPlan?.stops.map((stop, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-                      <div>
-                        <p className="font-medium">▶ {stop}</p>
-                      </div>
-                      <Button variant="destructive" size="sm">
-                        ➖ ลบ
-                      </Button>
-                    </div>
-                  ))}
-                  
-                  <Button variant="khonkaen" className="w-full">
-                    <Plus className="w-4 h-4" />
-                    เพิ่มสถานที่ใหม่
-                  </Button>
-                </CardContent>
-              </Card>
+              <PlacesTab currentPlan={currentPlan} />
             </TabsContent>
 
             {/* Transport Tab */}
             <TabsContent value="transport" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Car className="w-5 h-5" />
-                    🚗 การเดินทางในวันนี้
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4">
-                    <div>
-                      <label className="text-sm font-medium">📍 จุดเริ่มต้น:</label>
-                      <p className="mt-1 p-2 bg-secondary/30 rounded">{currentPlan?.startLocation || "ยังไม่ได้ระบุ"}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">📍 จุดสิ้นสุด:</label>
-                      <p className="mt-1 p-2 bg-secondary/30 rounded">{currentPlan?.endLocation || "ยังไม่ได้ระบุ"}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">🚗 วิธีการเดินทาง:</label>
-                      <p className="mt-1 p-2 bg-secondary/30 rounded">{currentPlan?.transportation || "ยังไม่ได้เลือก"}</p>
-                    </div>
-                  </div>
-                  
-                  {currentPlan?.startLocation && currentPlan?.endLocation && (
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-blue-800">
-                        ⏱️ เวลาประมาณ: 15 นาที | 📏 ระยะทาง: 3.2 กม.
-                      </p>
-                      <p className="text-sm text-blue-600 mt-1">
-                        💡 คำแนะนำจาก AI: คุณเลือก 'รถส่วนตัว' จาก 'บ้านพัก' ไป 'สวนสาธารณะศรีมหาโพธิ' — เส้นทางโดยเฉลี่ยใช้เวลา 15 นาที ผ่านถนนมิตรภาพ
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <TransportTab currentPlan={currentPlan} />
             </TabsContent>
 
             {/* Accommodation Tab */}
             <TabsContent value="accommodation" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Hotel className="w-5 h-5" />
-                    🏨 ที่พักในวันนี้
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">ชื่อที่พัก:</label>
-                      <p className="mt-1 p-2 bg-secondary/30 rounded">{currentPlan?.accommodation || "ยังไม่ได้ระบุ"}</p>
-                    </div>
-                    
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-blue-800">
-                        💡 คำแนะนำ: จองที่พักในเขตตัวเมืองจะสะดวกต่อการเดินทาง
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <AccommodationTab currentPlan={currentPlan} />
             </TabsContent>
 
             {/* Activities Tab */}
             <TabsContent value="activities" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    📌 กิจกรรมวันนี้ ({currentPlan?.activities.length || 0} รายการ)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {currentPlan?.activities.map((activity, index) => (
-                    <div key={index} className="p-4 bg-secondary/30 rounded-lg border border-border/30">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">▶ {activity.title}</h4>
-                        <Button variant="destructive" size="sm">
-                          ➖ ลบ
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                        <span>🕐 {activity.timeStart}–{activity.timeEnd}</span>
-                        <span>💰 {activity.cost} บาท</span>
-                        <Badge variant="secondary">
-                          {getActivityTypeIcon(activity.type)} {activity.type}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        ℹ️ {activity.description}
-                      </p>
-                    </div>
-                  ))}
-                  
-                  <Button variant="hero" className="w-full">
-                    <Plus className="w-4 h-4" />
-                    ➕ เพิ่มกิจกรรมใหม่
-                  </Button>
-                </CardContent>
-              </Card>
+              <ActivitiesTab currentPlan={currentPlan} />
             </TabsContent>
           </Tabs>
 
