@@ -10,6 +10,7 @@ import PlanManager from "./pages/PlanManager";
 
 import RestaurantSearch from "./pages/RestaurantSearch";
 import TouristAttractionSearch from "./pages/TouristAttractionSearch";
+import ProductRecommendations from "./pages/ProductRecommendations";
 import MyCollections from "./pages/MyCollections";
 import NotFound from "./pages/NotFound";
 import AIAssistant from "./components/AIAssistant";
@@ -30,6 +31,7 @@ const App = () => (
 
           <Route path="/restaurant-search" element={<RestaurantSearch />} />
           <Route path="/tourist-attraction-search" element={<TouristAttractionSearch />} />
+          <Route path="/product-recommendations" element={<ProductRecommendations />} />
           <Route path="/my-collections" element={<MyCollections />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

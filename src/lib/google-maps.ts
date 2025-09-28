@@ -164,7 +164,7 @@ class GoogleMapsService {
     return new Promise((resolve, reject) => {
       const request: google.maps.places.PlaceDetailsRequest = {
         placeId,
-        fields: ['name', 'rating', 'price_level', 'opening_hours', 'vicinity', 'geometry', 'photos', 'formatted_phone_number', 'website']
+        fields: ['name', 'rating', 'price_level', 'opening_hours', 'vicinity', 'geometry', 'photos', 'formatted_phone_number', 'website', 'types', 'formatted_address']
       };
 
       this.placesService!.getDetails(request, (place, status) => {
@@ -172,6 +172,32 @@ class GoogleMapsService {
           resolve(place);
         } else {
           reject(new Error(`Place details request failed with status: ${status}`));
+        }
+      });
+    });
+  }
+
+  async textSearchPlaces(
+    query: string,
+    location?: google.maps.LatLng,
+    radius: number = 50000
+  ): Promise<google.maps.places.PlaceResult[]> {
+    if (!this.placesService) {
+      throw new Error("Places service not initialized. Call initializePlacesServices() first.");
+    }
+
+    return new Promise((resolve, reject) => {
+      const request: google.maps.places.TextSearchRequest = {
+        query,
+        location,
+        radius,
+      };
+
+      this.placesService!.textSearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+          resolve(results);
+        } else {
+          reject(new Error(`Text search failed with status: ${status}`));
         }
       });
     });

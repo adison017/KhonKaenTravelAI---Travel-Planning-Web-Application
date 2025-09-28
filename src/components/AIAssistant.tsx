@@ -47,20 +47,29 @@ const AIAssistant = () => {
 
       // Check if the response contains special commands
       if (response.includes('[CREATE_TRIP]')) {
-        // Extract trip creation command and create the trip
-        const tripId = createSampleKhonKaenTrip();
-        const successMessage = `✅ สร้างทริปสำเร็จแล้ว! 🎉\n\nทริป "${tripId}" ถูกบันทึกใน localStorage แล้ว\n\nคุณสามารถดูและแก้ไขทริปได้ในหน้า "ทริปของฉัน" หรือคลิกปุ่มด้านล่างเพื่อดูทริปนี้เลย!`;
+        try {
+          // Extract trip creation command and create the trip
+          const tripId = await createSampleKhonKaenTrip();
+          const successMessage = `✅ สร้างทริปสำเร็จแล้ว! 🎉\n\nทริป "${tripId}" ถูกบันทึกใน localStorage แล้ว\n\nคุณสามารถดูและแก้ไขทริปได้ในหน้า "ทริปของฉัน" หรือคลิกปุ่มด้านล่างเพื่อดูทริปนี้เลย!`;
 
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: successMessage,
-          timestamp: new Date()
-        }]);
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: successMessage,
+            timestamp: new Date()
+          }]);
 
-        // Add navigation button (this will be displayed as a clickable element)
-        setTimeout(() => {
-          navigate(`/plan/${tripId}`);
-        }, 2000);
+          // Add navigation button (this will be displayed as a clickable element)
+          setTimeout(() => {
+            navigate(`/plan/${tripId}`);
+          }, 2000);
+        } catch (error) {
+          console.error('Error creating trip:', error);
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: '❌ ขออภัย เกิดข้อผิดพลาดในการสร้างทริป กรุณาลองใหม่อีกครั้ง',
+            timestamp: new Date()
+          }]);
+        }
       } else {
         setMessages(chatRef.current.getMessages());
       }

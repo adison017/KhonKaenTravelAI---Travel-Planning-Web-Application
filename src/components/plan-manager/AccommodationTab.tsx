@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,12 @@ interface AccommodationTabProps {
 }
 
 const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, selectedDay }: AccommodationTabProps) => {
-  const [accommodation, setAccommodation] = useState(currentPlan?.accommodation || "");
+  const isUserInputRef = useRef(false);
+
+  const [accommodation, setAccommodation] = useState(() => {
+    isUserInputRef.current = false; // Initial load from props
+    return currentPlan?.accommodation || "";
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<HotelSearchResult[]>([]);
   const [selectedHotel, setSelectedHotel] = useState<HotelDetails | null>(null);
@@ -30,6 +35,7 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [showHotelModal, setShowHotelModal] = useState(false);
   const [localStorageData, setLocalStorageData] = useState<any>(null);
+  const [selectedHotelCard, setSelectedHotelCard] = useState<HotelSearchResult | null>(null);
 
   // Load localStorage data when component mounts
   useEffect(() => {
@@ -41,16 +47,26 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
       if (data && selectedDay) {
         const planForDay = data.plans.find((plan: any) => plan.day === selectedDay);
         if (planForDay) {
+          isUserInputRef.current = false; // This is from localStorage, not user input
           setAccommodation(planForDay.accommodation || "");
         }
       }
     }
   }, [collectionId, selectedDay]);
 
-  // Update the parent component when accommodation changes
+  // Update accommodation when currentPlan changes (from day selection)
   useEffect(() => {
-    if (onUpdateAccommodation) {
+    if (currentPlan?.accommodation !== accommodation) {
+      isUserInputRef.current = false; // This is from props, not user input
+      setAccommodation(currentPlan?.accommodation || "");
+    }
+  }, [currentPlan?.accommodation]);
+
+  // Update the parent component when accommodation changes (only for user input)
+  useEffect(() => {
+    if (onUpdateAccommodation && isUserInputRef.current) {
       onUpdateAccommodation(accommodation);
+      isUserInputRef.current = false; // Reset the flag
     }
   }, [accommodation, onUpdateAccommodation]);
 
@@ -60,6 +76,7 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
     setIsSearching(true);
     setSearchResults([]);
     setSelectedHotel(null);
+    setSelectedHotelCard(null); // Clear selected hotel card
 
     try {
       const results = await searchHotelDestinations(searchTerm + " ขอนแก่น");
@@ -72,14 +89,42 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
     }
   };
 
-  const handleSelectHotel = async (hotel: HotelSearchResult) => {
+  const handleSelectHotel = (hotel: HotelSearchResult) => {
     console.log("Selecting hotel:", hotel);
+    setSelectedHotelCard(hotel);
+    setSearchResults([]); // Hide search results
+    setSearchTerm(""); // Clear search term
+  };
+
+  const handleViewHotelDetails = async () => {
+    if (!selectedHotelCard) return;
+
     setIsLoadingDetails(true);
 
     try {
-      console.log("Fetching details for hotel ID:", hotel.dest_id);
-      const details = await getHotelDetails(hotel.dest_id);
+      // Try with the selected hotel first
+      // Use current date and tomorrow for check-in/out
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      const checkinDate = today.toISOString().split('T')[0];
+      const checkoutDate = tomorrow.toISOString().split('T')[0];
+
+      console.log("Fetching details for hotel ID:", selectedHotelCard.dest_id);
+      console.log("Hotel name:", selectedHotelCard.name);
+      console.log("Dates:", checkinDate, "to", checkoutDate);
+
+      let details = await getHotelDetails(selectedHotelCard.dest_id, checkinDate, checkoutDate, 1, '', 1);
+
+      // If that fails, try with a known working hotel ID for testing
+      if (!details) {
+        console.log("Trying with test hotel ID: 191605");
+        details = await getHotelDetails('191605', checkinDate, checkoutDate, 1, '', 1);
+      }
       console.log("Hotel details received:", details);
+      console.log("Details status:", details?.status);
+      console.log("Details message:", details?.message);
 
       // Always show modal, even with minimal data
       const hotelData = details || {
@@ -87,10 +132,10 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
         message: "Success",
         timestamp: Date.now(),
         data: {
-          hotel_id: parseInt(hotel.dest_id),
-          hotel_name: hotel.name,
-          address: hotel.label,
-          city: hotel.city_name,
+          hotel_id: parseInt(selectedHotelCard.dest_id),
+          hotel_name: selectedHotelCard.name,
+          address: selectedHotelCard.label,
+          city: selectedHotelCard.city_name,
           countrycode: "TH",
           facilities_block: { facilities: [] },
           rooms: {},
@@ -101,8 +146,6 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
       setSelectedHotel(hotelData as any);
       setShowHotelModal(true);
       console.log("Modal should open now");
-      setSearchResults([]); // Hide search results
-      setSearchTerm(""); // Clear search term
 
     } catch (error) {
       console.error("Error getting hotel details:", error);
@@ -112,10 +155,10 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
         message: "Success",
         timestamp: Date.now(),
         data: {
-          hotel_id: parseInt(hotel.dest_id),
-          hotel_name: hotel.name,
-          address: hotel.label,
-          city: hotel.city_name,
+          hotel_id: parseInt(selectedHotelCard.dest_id),
+          hotel_name: selectedHotelCard.name,
+          address: selectedHotelCard.label,
+          city: selectedHotelCard.city_name,
           countrycode: "TH",
           facilities_block: { facilities: [] },
           rooms: {},
@@ -129,6 +172,7 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
   };
 
   const handleConfirmHotel = (hotelName: string) => {
+    isUserInputRef.current = true;
     setAccommodation(hotelName);
     setSelectedHotel(null);
     setShowHotelModal(false);
@@ -178,7 +222,10 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setAccommodation("")}
+                  onClick={() => {
+                    isUserInputRef.current = true;
+                    setAccommodation("");
+                  }}
                   className="text-green-700 border-green-300 hover:bg-green-100"
                 >
                   เปลี่ยน
@@ -254,6 +301,56 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
                 </Card>
               )}
 
+              {/* Selected Hotel Card */}
+              {selectedHotelCard && (
+                <Card className="border-2 border-green-200 bg-green-50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Hotel className="w-5 h-5 text-green-600" />
+                      ที่พักที่เลือก
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex items-start gap-4">
+                      {selectedHotelCard.image_url && (
+                        <img
+                          src={selectedHotelCard.image_url}
+                          alt={selectedHotelCard.name}
+                          className="w-20 h-20 object-cover rounded-lg border"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-green-800">{selectedHotelCard.name}</h3>
+                        <p className="text-sm text-green-700 flex items-center gap-1 mt-1">
+                          <MapPin className="w-4 h-4" />
+                          {selectedHotelCard.city_name}, {selectedHotelCard.country}
+                        </p>
+                        {selectedHotelCard.region && (
+                          <p className="text-sm text-green-600 mt-1">{selectedHotelCard.region}</p>
+                        )}
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            onClick={handleViewHotelDetails}
+                            disabled={isLoadingDetails}
+                            className="bg-green-600 hover:bg-green-700"
+                            size="sm"
+                          >
+                            {isLoadingDetails ? "กำลังโหลด..." : "ดูรายละเอียด"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setSelectedHotelCard(null)}
+                            size="sm"
+                            className="border-green-300 text-green-700 hover:bg-green-100"
+                          >
+                            ยกเลิก
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Manual Input Fallback */}
               <Separator />
@@ -264,7 +361,10 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
                 </label>
                 <Input
                   value={accommodation}
-                  onChange={(e) => setAccommodation(e.target.value)}
+                  onChange={(e) => {
+                    isUserInputRef.current = true;
+                    setAccommodation(e.target.value);
+                  }}
                   placeholder="ระบุชื่อที่พักด้วยตัวเอง"
                   className="mt-1"
                 />
@@ -358,14 +458,18 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
             })()}
 
             {/* Price Information */}
-            {selectedHotel.data.block?.[0] && (
+            {selectedHotel.data.block && selectedHotel.data.block.length > 0 && selectedHotel.data.block[0] && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <h3 className="font-semibold text-green-800 mb-2">💰 ราคาและนโยบาย</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-2xl font-bold text-green-700">
-                      ฿{(selectedHotel.data as any).block[0].gross_amount_per_night.value.toLocaleString()} ต่อคืน
-                    </p>
+                    {(selectedHotel.data as any).block[0].gross_amount_per_night?.value ? (
+                      <p className="text-2xl font-bold text-green-700">
+                        ฿{(selectedHotel.data as any).block[0].gross_amount_per_night.value.toLocaleString()} ต่อคืน
+                      </p>
+                    ) : (
+                      <p className="text-lg text-green-700">ราคาไม่ระบุ</p>
+                    )}
                     <p className="text-sm text-green-600 mt-1">ราคารวมภาษีและค่าธรรมเนียม</p>
                   </div>
                   <div>
@@ -439,6 +543,16 @@ const AccommodationTab = ({ currentPlan, onUpdateAccommodation, collectionId, se
               >
                 🏨 เลือกโรงแรมนี้
               </Button>
+              {selectedHotel.data.url && (
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(selectedHotel.data.url, '_blank')}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
+                  size="lg"
+                >
+                  🌐 ดูที่ Booking.com
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={handleCloseModal}

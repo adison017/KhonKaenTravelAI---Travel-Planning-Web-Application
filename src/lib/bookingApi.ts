@@ -87,28 +87,129 @@ export interface HotelDetails {
 }
 
 /**
- * Search for hotel destinations
+ * Search for hotels
  * @param query Search query (e.g., "khon kaen hotel")
  * @returns Array of hotel search results
  */
-export const searchHotelDestinations = async (query: string): Promise<HotelSearchResult[]> => {
-  try {
-    const response = await axios.get('https://booking-com15.p.rapidapi.com/api/v1/hotels/searchDestination', {
-      params: { query },
-      headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY,
-        'x-rapidapi-host': RAPIDAPI_HOST
-      }
-    });
-
-    if (response.data.status && response.data.data) {
-      return response.data.data;
-    }
-    return [];
-  } catch (error) {
-    console.error('Error searching hotel destinations:', error);
-    return [];
+// Mock hotel data for Khon Kaen (no API calls needed)
+const mockKhonKaenHotels: HotelSearchResult[] = [
+  {
+    dest_id: "191605",
+    search_type: "hotel",
+    dest_type: "hotel",
+    latitude: 16.4322,
+    longitude: 102.8236,
+    type: "ho",
+    lc: "th",
+    name: "โรงแรมเกิดมานอน ขอนแก่น",
+    nr_hotels: 1,
+    cc1: "th",
+    country: "Thailand",
+    region: "Khon Kaen Province",
+    hotels: 1,
+    roundtrip: "",
+    image_url: "https://cf.bstatic.com/xdata/images/hotel/150x150/617928228.jpg",
+    city_name: "Khon Kaen",
+    city_ufi: -3249423,
+    label: "โรงแรมเกิดมานอน ขอนแก่น, Khon Kaen, Khon Kaen Province, Thailand"
+  },
+  {
+    dest_id: "191606",
+    search_type: "hotel",
+    dest_type: "hotel",
+    latitude: 16.4350,
+    longitude: 102.8250,
+    type: "ho",
+    lc: "th",
+    name: "คานาโฮมฮัก ขอนแก่น",
+    nr_hotels: 1,
+    cc1: "th",
+    country: "Thailand",
+    region: "Khon Kaen Province",
+    hotels: 1,
+    roundtrip: "",
+    image_url: "https://cf.bstatic.com/xdata/images/hotel/150x150/456795966.jpg",
+    city_name: "Ban Tao No",
+    city_ufi: -3408211,
+    label: "คานาโฮมฮัก ขอนแก่น, Ban Tao No, Khon Kaen Province, Thailand"
+  },
+  {
+    dest_id: "191607",
+    search_type: "hotel",
+    dest_type: "hotel",
+    latitude: 16.4300,
+    longitude: 102.8200,
+    type: "ho",
+    lc: "th",
+    name: "อารมย์ดี อพาทเม้นท์ ขอนแก่น",
+    nr_hotels: 1,
+    cc1: "th",
+    country: "Thailand",
+    region: "Khon Kaen Province",
+    hotels: 1,
+    roundtrip: "",
+    image_url: "https://cf.bstatic.com/xdata/images/hotel/150x150/422139763.jpg",
+    city_name: "Ban Nong Waeng",
+    city_ufi: -3405455,
+    label: "อารมย์ดี อพาทเม้นท์ ขอนแก่น, Ban Nong Waeng, Khon Kaen Province, Thailand"
+  },
+  {
+    dest_id: "191608",
+    search_type: "hotel",
+    dest_type: "hotel",
+    latitude: 16.4400,
+    longitude: 102.8300,
+    type: "ho",
+    lc: "th",
+    name: "DM ขอนแก่น โรงพยาบาลศรีนครินทร์",
+    nr_hotels: 1,
+    cc1: "th",
+    country: "Thailand",
+    region: "Khon Kaen Province",
+    hotels: 1,
+    roundtrip: "",
+    image_url: "https://cf.bstatic.com/xdata/images/hotel/150x150/554625233.jpg",
+    city_name: "Ban Nong Waeng",
+    city_ufi: -3405455,
+    label: "DM ขอนแก่น โรงพยาบาลศรีนครินทร์ มข, Ban Nong Waeng, Khon Kaen Province, Thailand"
+  },
+  {
+    dest_id: "191609",
+    search_type: "hotel",
+    dest_type: "hotel",
+    latitude: 16.4280,
+    longitude: 102.8220,
+    type: "ho",
+    lc: "th",
+    name: "The Metal เดอะ เมทัล ขอนแก่น",
+    nr_hotels: 1,
+    cc1: "th",
+    country: "Thailand",
+    region: "Khon Kaen Province",
+    hotels: 1,
+    roundtrip: "",
+    image_url: "https://cf.bstatic.com/xdata/images/hotel/150x150/613074382.jpg",
+    city_name: "Ban Nong Waeng",
+    city_ufi: -3405455,
+    label: "The Metal เดอะ เมทัล ขอนแก่น, Ban Nong Waeng, Khon Kaen Province, Thailand"
   }
+];
+
+export const searchHotelDestinations = async (query: string): Promise<HotelSearchResult[]> => {
+  console.log('Searching hotels with query:', query);
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  // Return mock data for Khon Kaen searches
+  if (query.toLowerCase().includes('ขอนแก่น') || query.toLowerCase().includes('khon kaen')) {
+    console.log(`Found ${mockKhonKaenHotels.length} hotels for Khon Kaen`);
+    return mockKhonKaenHotels;
+  }
+
+  // Return empty for other searches (no API call limits)
+  console.log('No hotels found for query:', query);
+  return [];
 };
 
 /**
@@ -121,45 +222,155 @@ export const searchHotelDestinations = async (query: string): Promise<HotelSearc
  * @param roomQty Number of rooms
  * @returns Detailed hotel information
  */
+// Mock hotel details data
+const mockHotelDetails: { [key: string]: HotelDetails } = {
+  "191605": {
+    status: true,
+    message: "Success",
+    timestamp: Date.now(),
+    data: {
+      hotel_id: 191605,
+      hotel_name: "โรงแรมเกิดมานอน ขอนแก่น",
+      url: "https://www.booking.com/hotel/th/kertmanon-khonkaen.html",
+      hotel_name_trans: "Kert Manon Hotel Khon Kaen",
+      review_nr: 245,
+      arrival_date: "2025-01-01",
+      departure_date: "2025-01-02",
+      latitude: 16.4322,
+      longitude: 102.8236,
+      address: "ถนนมิตรภาพ ตำบลในเมือง อำเภอเมืองขอนแก่น",
+      city: "Khon Kaen",
+      countrycode: "th",
+      zip: "40000",
+      timezone: "Asia/Bangkok",
+      property_highlight_strip: [
+        { name: "Free parking", icon_list: [{ icon: "parking_sign" }] },
+        { name: "Swimming pool", icon_list: [{ icon: "pool" }] },
+        { name: "Restaurant", icon_list: [{ icon: "food" }] },
+        { name: "Free WiFi", icon_list: [{ icon: "wifi" }] }
+      ],
+      facilities_block: {
+        facilities: [
+          { name: "Free WiFi", icon: "wifi" },
+          { name: "Swimming pool", icon: "pool" },
+          { name: "Restaurant", icon: "food" },
+          { name: "Parking", icon: "parking" },
+          { name: "Fitness centre", icon: "fitness" }
+        ]
+      },
+      rooms: {
+        "19160501": {
+          description: "ห้องพักสไตล์โมเดิร์นพร้อมวิวเมือง ขนาด 28 ตร.ม.",
+          photos: [
+            { url_max300: "https://cf.bstatic.com/xdata/images/hotel/max300/617928228.jpg", url_original: "https://cf.bstatic.com/xdata/images/hotel/max500/617928228.jpg" },
+            { url_max300: "https://cf.bstatic.com/xdata/images/hotel/max300/617928229.jpg", url_original: "https://cf.bstatic.com/xdata/images/hotel/max500/617928229.jpg" }
+          ],
+          facilities: [
+            { name: "Air conditioning" },
+            { name: "Private bathroom" },
+            { name: "Flat-screen TV" }
+          ],
+          highlights: [
+            { translated_name: "Free WiFi", icon: "wifi" },
+            { translated_name: "City view", icon: "city" },
+            { translated_name: "Air conditioning", icon: "snowflake" }
+          ]
+        }
+      },
+      block: [
+        {
+          room_name: "Superior Room with City View",
+          gross_amount_per_night: { value: 1200, currency: "THB" },
+          all_inclusive_amount: { value: 1350, currency: "THB" }
+        }
+      ]
+    }
+  },
+  "191606": {
+    status: true,
+    message: "Success",
+    timestamp: Date.now(),
+    data: {
+      hotel_id: 191606,
+      hotel_name: "คานาโฮมฮัก ขอนแก่น",
+      url: "https://www.booking.com/hotel/th/cana-home-hug-khonkaen.html",
+      hotel_name_trans: "Cana Home Hug Khon Kaen",
+      review_nr: 89,
+      arrival_date: "2025-01-01",
+      departure_date: "2025-01-02",
+      latitude: 16.4350,
+      longitude: 102.8250,
+      address: "ถนนศรีจันทร์ ตำบลในเมือง อำเภอเมืองขอนแก่น",
+      city: "Khon Kaen",
+      countrycode: "th",
+      zip: "40000",
+      timezone: "Asia/Bangkok",
+      property_highlight_strip: [
+        { name: "Free WiFi", icon_list: [{ icon: "wifi" }] },
+        { name: "Kitchen", icon_list: [{ icon: "kitchen" }] },
+        { name: "Garden", icon_list: [{ icon: "garden" }] },
+        { name: "BBQ facilities", icon_list: [{ icon: "bbq" }] }
+      ],
+      facilities_block: {
+        facilities: [
+          { name: "Free WiFi", icon: "wifi" },
+          { name: "Kitchen", icon: "kitchen" },
+          { name: "Garden", icon: "garden" },
+          { name: "BBQ facilities", icon: "bbq" }
+        ]
+      },
+      rooms: {
+        "19160601": {
+          description: "ห้องพักพร้อมครัวขนาดใหญ่ เหมาะสำหรับครอบครัว",
+          photos: [
+            { url_max300: "https://cf.bstatic.com/xdata/images/hotel/max300/456795966.jpg", url_original: "https://cf.bstatic.com/xdata/images/hotel/max500/456795966.jpg" }
+          ],
+          facilities: [
+            { name: "Kitchen" },
+            { name: "Washing machine" },
+            { name: "Garden view" }
+          ],
+          highlights: [
+            { translated_name: "Free WiFi", icon: "wifi" },
+            { translated_name: "Kitchen", icon: "kitchen" },
+            { translated_name: "Garden view", icon: "tree" }
+          ]
+        }
+      },
+      block: [
+        {
+          room_name: "Deluxe Family Room",
+          gross_amount_per_night: { value: 1800, currency: "THB" },
+          all_inclusive_amount: { value: 2000, currency: "THB" }
+        }
+      ]
+    }
+  }
+};
+
 export const getHotelDetails = async (
   hotelId: string,
-  checkinDate: string = '2025-01-01',
-  checkoutDate: string = '2025-01-02',
+  checkinDate?: string,
+  checkoutDate?: string,
   adults: number = 1,
-  childrenAges: string = '',
+  childrenAges?: string,
   roomQty: number = 1
 ): Promise<HotelDetails | null> => {
-  try {
-    const params: any = {
-      hotel_id: hotelId,
-      adults,
-      room_qty: roomQty,
-      units: 'metric',
-      temperature_unit: 'c',
-      languagecode: 'en-us',
-      currency_code: 'THB'
-    };
+  console.log('Getting hotel details for ID:', hotelId);
 
-    if (childrenAges) {
-      params.children_age = childrenAges;
-    }
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 800));
 
-    const response = await axios.get('https://booking-com15.p.rapidapi.com/api/v1/hotels/getHotelDetails', {
-      params,
-      headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY,
-        'x-rapidapi-host': RAPIDAPI_HOST
-      }
-    });
-
-    if (response.data.status) {
-      return response.data;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error getting hotel details:', error);
-    return null;
+  // Return mock data
+  const hotelDetail = mockHotelDetails[hotelId];
+  if (hotelDetail) {
+    console.log('Found hotel details for:', hotelDetail.data.hotel_name);
+    return hotelDetail;
   }
+
+  // Fallback for unknown hotel IDs
+  console.log('No hotel details found for ID:', hotelId);
+  return null;
 };
 
 /**

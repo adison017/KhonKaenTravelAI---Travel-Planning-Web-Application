@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { saveCollectionToLocalStorage, WeatherData, Activity, Plan, Collection } from './storage';
+import { fetchWeatherForecast, WeatherForecast } from './weatherApi';
 
 // Initialize Gemini API with the provided key
 const genAI = new GoogleGenerativeAI('AIzaSyDxOtuESZB_IeWBbaB3aljbLV7hDXtGFRY');
@@ -22,7 +23,7 @@ const SYSTEM_PROMPT = `คุณเป็น AI Assistant สำหรับแ�
 ความสามารถพิเศษในการสร้างทริป:
 เมื่อผู้ใช้ขอให้สร้างทริป คุณต้อง:
 1. ถามข้อมูลพื้นฐาน: ชื่อทริป, ประเภท (ครอบครัว/เพื่อน/คู่รัก/คนเดียว/นักเรียน), วันที่เริ่ม-สิ้นสุด, งบประมาณ
-2. สร้างแผนวันละวันที่มีสถานที่ท่องเที่ยว สถานที่รับประทานอาหาร กิจกรรม
+2. สร้างแผนวันละวันที่มีสถานที่ท่องเที่ยว สถานที่รับประทานอาหาร กิจกรรม ใหม่ทั้งหมด - ห้ามใช้ข้อมูลเดิมหรือ template เดิม
 3. คำนวณค่าใช้จ่ายรวม
 4. เมื่อพร้อมสร้างทริป จบการตอบด้วย [CREATE_TRIP] เพื่อให้ระบบสร้างทริปอัตโนมัติ
 5. หลังจากสร้างทริปแล้ว ระบบจะแจ้งผู้ใช้ว่าทริปถูกสร้างแล้ว
@@ -30,6 +31,7 @@ const SYSTEM_PROMPT = `คุณเป็น AI Assistant สำหรับแ�
 คำสั่งพิเศษ:
 - ใช้ [CREATE_TRIP] เมื่อต้องการให้ระบบสร้างทริปทันที
 - อย่าพิมพ์ [CREATE_TRIP] ในข้อความที่ผู้ใช้เห็น แต่ใช้เป็นสัญญาณให้ระบบ
+- สร้างทริปใหม่ทุกครั้ง - ห้ามใช้ข้อมูล default หรือ template เดิม
 
 โปรดตอบเป็นภาษาไทยเท่านั้น และให้ข้อมูลที่เป็นมิตรและมีประโยชน์
 ใช้ emoji ที่เหมาะสมเพื่อทำให้การสนทนาน่าสนใจ`;
@@ -101,36 +103,33 @@ export class GeminiChat {
 }
 
 // Trip creation functions
-export const createTrip = (tripData: {
+export const createTrip = async (tripData: {
   name: string;
   category: string;
   startDate: string;
   endDate: string;
   budget: number;
   plans: Plan[];
-}): string => {
+}): Promise<string> => {
   try {
     // Generate unique collection ID
     const collectionId = `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create weather data (placeholder - would be fetched from API in real app)
-    const weatherData: WeatherData[] = [];
-    const start = new Date(tripData.startDate);
-    const end = new Date(tripData.endDate);
-    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    // Fetch real weather data from API
+    console.log('Fetching real weather data for trip creation...');
+    const weatherForecast = await fetchWeatherForecast(tripData.startDate, tripData.endDate);
 
-    for (let i = 0; i < Math.min(daysDiff, 5); i++) {
-      const date = new Date(start);
-      date.setDate(start.getDate() + i);
-      weatherData.push({
-        date: date.toISOString().split('T')[0],
-        temp: 30 + Math.floor(Math.random() * 8), // Random temp between 30-37°C
-        condition: ["แดดจัด", "เมฆบางส่วน", "มีฝนเล็กน้อย"][Math.floor(Math.random() * 3)],
-        humidity: 60 + Math.floor(Math.random() * 25),
-        wind: 5 + Math.floor(Math.random() * 10),
-        forecast: "เหมาะสำหรับการท่องเที่ยว"
-      });
-    }
+    // Convert WeatherForecast[] to WeatherData[] for storage compatibility
+    const weatherData: WeatherData[] = weatherForecast.map(forecast => ({
+      date: forecast.date,
+      temp: forecast.temp,
+      condition: forecast.condition,
+      humidity: forecast.humidity,
+      wind: forecast.wind,
+      forecast: forecast.forecast
+    }));
+
+    console.log('Weather data loaded:', weatherData.length, 'days');
 
     // Create collection object
     const collection: Collection = {
@@ -154,69 +153,142 @@ export const createTrip = (tripData: {
   }
 };
 
-// Function to create a sample trip for Khon Kaen
-export const createSampleKhonKaenTrip = (): string => {
-  const today = new Date();
-  const startDate = today.toISOString().split('T')[0];
-  const endDate = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+// Function to create a sample trip for Khon Kaen with AI-generated content
+export const createSampleKhonKaenTrip = async (): Promise<string> => {
+  try {
+    const today = new Date();
+    const startDate = today.toISOString().split('T')[0];
+    const endDate = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  const plans: Plan[] = [
+    // Generate unique trip name with timestamp
+    const tripId = Math.random().toString(36).substr(2, 9);
+    const tripName = `ทริปขอนแก่น ${tripId.slice(0, 4).toUpperCase()}`;
+
+    // Use AI to generate fresh trip content
+    const tripPrompt = `สร้างแผนการท่องเที่ยว 3 วันในจังหวัดขอนแก่นใหม่ทั้งหมด ไม่ใช้ข้อมูลเดิมหรือ template เดิม
+    ให้สร้างทริปที่ไม่ซ้ำกับทริปอื่นๆ โดยเลือกสถานที่ท่องเที่ยว ร้านอาหาร กิจกรรมใหม่ๆ ในขอนแก่น
+
+    รูปแบบ JSON ที่ต้องการ:
     {
-      day: 1,
-      startLocation: "บ้านพักในตัวเมืองขอนแก่น",
-      endLocation: "ตลาดทุ่งสร้าง",
-      transportation: "เดินเท้า/รถจักรยานยนต์",
-      accommodation: "โรงแรมในตัวเมืองขอนแก่น (1,200 บาท/คืน)",
-      stops: [
-        { name: "หอศิลปวัฒนธรรมแห่งจังหวัดขอนแก่น", timeStart: "09:00", timeEnd: "10:30", description: "ชมนิทรรศการศิลปะพื้นบ้าน" },
-        { name: "ตลาดทุ่งสร้าง", timeStart: "11:00", timeEnd: "12:30", description: "ชิมอาหารพื้นบ้านและเลือกซื้อของฝาก" }
-      ],
-      activities: [
+      "name": "${tripName}",
+      "category": "ครอบครัว",
+      "startDate": "${startDate}",
+      "endDate": "${endDate}",
+      "budget": 8500,
+      "plans": [
         {
-          title: "เยี่ยมชมสวนสาธารณะศรีมหาโพธิ",
-          date: startDate,
-          timeStart: "08:00",
-          timeEnd: "10:00",
-          description: "เดินเล่นรับลมเย็น ชมพระพุทธรูปใหญ่และทะเลสาบ",
-          cost: 0,
-          type: "ธรรมชาติ",
-          location: "สวนสาธารณะศรีมหาโพธิ"
-        }
-      ]
-    },
-    {
-      day: 2,
-      startLocation: "ตลาดทุ่งสร้าง",
-      endLocation: "วัดพระธาตุขามแก่น",
-      transportation: "รถยนต์ส่วนตัว",
-      accommodation: "โรงแรมในตัวเมืองขอนแก่น (1,200 บาท/คืน)",
-      stops: [
-        { name: "วัดพระธาตุขามแก่น", timeStart: "09:00", timeEnd: "11:00", description: "สักการะและชมสถาปัตยกรรม" },
-        { name: "หมู่บ้านโฮมสเตย์", timeStart: "13:00", timeEnd: "16:00", description: "สัมผัสวิถีชีวิตชุมชนท้องถิ่น" }
-      ],
-      activities: [
+          "day": 1,
+          "startLocation": "จุดเริ่มต้นใหม่",
+          "endLocation": "จุดสิ้นสุดวันที่ 1",
+          "transportation": "รูปแบบการเดินทาง",
+          "accommodation": "ที่พักใหม่",
+          "stops": [
+            {
+              "name": "สถานที่ท่องเที่ยวใหม่ในขอนแก่น",
+              "timeStart": "09:00",
+              "timeEnd": "11:00",
+              "description": "คำอธิบายกิจกรรม"
+            }
+          ],
+          "activities": [
+            {
+              "title": "กิจกรรมใหม่ที่ไม่ซ้ำ",
+              "date": "${startDate}",
+              "timeStart": "14:00",
+              "timeEnd": "16:00",
+              "description": "รายละเอียดกิจกรรม",
+              "cost": 300,
+              "type": "ประเภทกิจกรรม",
+              "location": "สถานที่จัดกิจกรรม"
+            }
+          ]
+        },
         {
-          title: "ล่องแก่งกะเหรี่ยง",
-          date: endDate,
-          timeStart: "14:00",
-          timeEnd: "16:00",
-          description: "ล่องแก่งชมธรรมชาติและวัฒนธรรมกะเหรี่ยง",
-          cost: 500,
-          type: "กิจกรรมผจญภัย",
-          location: "แก่งกะเหรี่ยง"
+          "day": 2,
+          "startLocation": "จุดเริ่มต้นวันที่ 2",
+          "endLocation": "จุดสิ้นสุดวันที่ 2",
+          "transportation": "รูปแบบการเดินทาง",
+          "accommodation": "ที่พักวันที่ 2",
+          "stops": [
+            {
+              "name": "สถานที่ท่องเที่ยววันที่ 2",
+              "timeStart": "10:00",
+              "timeEnd": "12:00",
+              "description": "คำอธิบายกิจกรรมวันที่ 2"
+            }
+          ],
+          "activities": [
+            {
+              "title": "กิจกรรมวันที่ 2",
+              "date": "${endDate}",
+              "timeStart": "13:00",
+              "timeEnd": "15:00",
+              "description": "รายละเอียดกิจกรรมวันที่ 2",
+              "cost": 400,
+              "type": "ประเภทกิจกรรม",
+              "location": "สถานที่จัดกิจกรรมวันที่ 2"
+            }
+          ]
         }
       ]
     }
-  ];
 
-  return createTrip({
-    name: "ทริปครอบครัวขอนแก่น 3 วัน",
-    category: "ครอบครัว",
-    startDate,
-    endDate,
-    budget: 9000,
-    plans
-  });
+    โปรดสร้างทริปที่แตกต่างและน่าสนใจ ให้ใช้สถานที่จริงในขอนแก่น และคำนวณราคาให้สมจริง`;
+
+    console.log('Generating fresh trip content with AI...');
+    const response = await generateGeminiResponse(tripPrompt);
+
+    // Parse the AI-generated trip data
+    const tripData = JSON.parse(response);
+
+    // Validate and ensure proper structure
+    if (!tripData.plans || !Array.isArray(tripData.plans)) {
+      throw new Error('Invalid trip data structure from AI');
+    }
+
+    return createTrip(tripData);
+  } catch (error) {
+    console.error('Error generating AI trip:', error);
+
+    // Fallback to basic trip if AI generation fails
+    const today = new Date();
+    const startDate = today.toISOString().split('T')[0];
+    const endDate = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const plans: Plan[] = [
+      {
+        day: 1,
+        startLocation: "ใจกลางเมืองขอนแก่น",
+        endLocation: "สวนสาธารณะ",
+        transportation: "เดินเท้า",
+        accommodation: "โรงแรมในตัวเมือง",
+        stops: [
+          { name: "สวนสาธารณะศรีมหาโพธิ", timeStart: "09:00", timeEnd: "11:00", description: "เดินชมธรรมชาติและพระพุทธรูป" }
+        ],
+        activities: [
+          {
+            title: "ชมสวนสาธารณะ",
+            date: startDate,
+            timeStart: "09:00",
+            timeEnd: "11:00",
+            description: "ผ่อนคลายในสวนสาธารณะที่สวยงาม",
+            cost: 0,
+            type: "ธรรมชาติ",
+            location: "สวนสาธารณะศรีมหาโพธิ"
+          }
+        ]
+      }
+    ];
+
+    return createTrip({
+      name: "ทริปขอนแก่นแบบง่าย",
+      category: "ครอบครัว",
+      startDate,
+      endDate,
+      budget: 5000,
+      plans
+    });
+  }
 };
 
 // Singleton instance for the chat

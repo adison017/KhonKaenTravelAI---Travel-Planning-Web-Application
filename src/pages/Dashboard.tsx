@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Calendar, MapPin, DollarSign, Cloud, Eye, Edit3, Sparkles, Mountain, TreePine, Utensils, Camera } from "lucide-react";
+import { Plus, Calendar, MapPin, DollarSign, Cloud, Eye, Edit3, Sparkles, Mountain, TreePine, Utensils, Camera, ShoppingBag, Crown } from "lucide-react";
 import { listCollectionIds, loadCollectionFromLocalStorage } from "@/lib/storage";
 import khonkaenHero from "@/assets/khonkaen-hero.jpg";
 
@@ -109,24 +109,32 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" className="font-prompt hover:scale-105 transition-transform">
-                🔍 ค้นหา
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="font-prompt hover:scale-105 transition-transform"
-                onClick={() => navigate('/my-collections')}
-              >
-                📁 ทริปของฉัน
-              </Button>
-              <Button variant="ghost" size="sm" className="font-prompt hover:scale-105 transition-transform">
-                👤 โปรไฟล์
-              </Button>
-              <Button variant="ghost" size="sm" className="font-prompt hover:scale-105 transition-transform">
-                ⚙️ ตั้งค่า
-              </Button>
-            </div>
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 className="font-prompt hover:scale-105 transition-transform bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:from-yellow-500 hover:to-orange-600"
+               >
+                 <Crown className="w-4 h-4 mr-1" />
+                 💎 Subscribe
+               </Button>
+               <Button variant="ghost" size="sm" className="font-prompt hover:scale-105 transition-transform">
+                 🔍 ค้นหา
+               </Button>
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 className="font-prompt hover:scale-105 transition-transform"
+                 onClick={() => navigate('/my-collections')}
+               >
+                 📁 ทริปของฉัน
+               </Button>
+               <Button variant="ghost" size="sm" className="font-prompt hover:scale-105 transition-transform">
+                 👤 โปรไฟล์
+               </Button>
+               <Button variant="ghost" size="sm" className="font-prompt hover:scale-105 transition-transform">
+                 ⚙️ ตั้งค่า
+               </Button>
+             </div>
           </div>
         </div>
       </header>
@@ -151,9 +159,9 @@ const Dashboard = () => {
               เก็บเกี่ยวประสบการณ์ วางแผนอย่างชาญฉลาด ด้วย AI
             </p>
             <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                variant="hero" 
-                size="xl" 
+              <Button
+                variant="hero"
+                size="xl"
                 onClick={() => navigate('/create-collection')}
                 className="font-prompt animate-glow hover:scale-110 transition-all duration-300 shadow-2xl"
               >
@@ -161,9 +169,9 @@ const Dashboard = () => {
                 สร้างทริปใหม่
                 <Sparkles className="w-5 h-5 ml-2" />
               </Button>
-              <Button 
-                variant="secondary" 
-                size="xl" 
+              <Button
+                variant="secondary"
+                size="xl"
                 onClick={() => navigate('/restaurant-search')}
                 className="font-prompt animate-glow hover:scale-110 transition-all duration-300 shadow-2xl bg-khonkaen-warm/90 hover:bg-khonkaen-warm text-white border-0"
               >
@@ -171,15 +179,25 @@ const Dashboard = () => {
                 ร้านอาหารใกล้ฉัน
                 <span className="text-lg ml-2">🍜</span>
               </Button>
-              <Button 
-                variant="secondary" 
-                size="xl" 
+              <Button
+                variant="secondary"
+                size="xl"
                 onClick={() => navigate('/tourist-attraction-search')}
                 className="font-prompt animate-glow hover:scale-110 transition-all duration-300 shadow-2xl bg-khonkaen-nature/90 hover:bg-khonkaen-nature text-white border-0"
               >
                 <Camera className="w-6 h-6" />
                 สถานที่ท่องเที่ยวใกล้ฉัน
                 <span className="text-lg ml-2">📍</span>
+              </Button>
+              <Button
+                variant="secondary"
+                size="xl"
+                onClick={() => navigate('/product-recommendations')}
+                className="font-prompt animate-glow hover:scale-110 transition-all duration-300 shadow-2xl bg-khonkaen-culture/90 hover:bg-khonkaen-culture text-white border-0"
+              >
+                <ShoppingBag className="w-6 h-6" />
+                สินค้าแนะนำสำหรับเที่ยวขอนแก่น
+                <span className="text-lg ml-2">🎒</span>
               </Button>
             </div>
           </div>
@@ -194,7 +212,7 @@ const Dashboard = () => {
         {/* Collections Section */}
         <div className="mb-8 animate-fade-in" style={{ animationDelay: '0.3s' }}>
           <h3 className="text-2xl font-bold text-foreground font-kanit mb-2 flex items-center gap-2">
-            📁 ทริปของคุณ
+            📁 ทริปแนะนำ
             <span className="text-sm font-normal text-muted-foreground">({collections.length} ทริป)</span>
           </h3>
           <p className="text-muted-foreground font-sarabun">จัดการและติดตามแผนการท่องเที่ยวของคุณ</p>

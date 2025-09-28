@@ -35,6 +35,7 @@ const TouristAttractionSearch = () => {
   const [selectedAttraction, setSelectedAttraction] = useState<TouristAttraction | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
+
   const categories = [
     "ทั้งหมด",
     "วัด",
@@ -249,50 +250,48 @@ const TouristAttractionSearch = () => {
         setIsSearching(false);
         return;
       }
-      
-      // Use Google Places Nearby Search to get tourist attractions
+
       const location = new google.maps.LatLng(userLocation.lat, userLocation.lng);
-      const radius = 30000; // 30km radius
-      
-      let allResults: google.maps.places.PlaceResult[] = [];
-      
-      if (selectedCategory === "ทั้งหมด") {
-        // Search for tourist attractions in general
-        console.log('Searching for all tourist attractions nearby');
-        try {
-          const results = await googleMapsService.searchNearbyRestaurants(location, radius, 'tourist_attraction');
-          allResults = results || [];
-        } catch (error) {
-          console.log('Error searching for tourist attractions:', error);
-          allResults = [];
-        }
-      } else {
-        // For specific categories, still use nearby search but we'll filter later
-        console.log('Searching for tourist attractions, category:', selectedCategory);
-        try {
-          const results = await googleMapsService.searchNearbyRestaurants(location, radius, 'tourist_attraction');
-          allResults = results || [];
-        } catch (error) {
-          console.log(`Error searching for ${selectedCategory}:`, error);
-          allResults = [];
-        }
+
+      let searchQuery = 'สถานที่ท่องเที่ยว ขอนแก่น';
+
+      if (selectedCategory !== "ทั้งหมด") {
+        // Map Thai categories to search keywords
+        const categoryKeywords: { [key: string]: string } = {
+          "วัด": "วัด ขอนแก่น temple",
+          "พิพิธภัณฑ์": "พิพิธภัณฑ์ ขอนแก่น museum",
+          "สวนสาธารณะ": "สวนสาธารณะ ขอนแก่น park garden",
+          "ตลาด": "ตลาด ขอนแก่น market",
+          "ห้างสรรพสินค้า": "ห้างสรรพสินค้า ขอนแก่น mall shopping",
+          "สถานที่ท่องเที่ยว": "สถานที่ท่องเที่ยว ขอนแก่น attraction",
+          "ธรรมชาติ": "ธรรมชาติ ขอนแก่น nature",
+          "ประวัติศาสตร์": "ประวัติศาสตร์ ขอนแก่น historical landmark",
+          "ศิลปะ": "ศิลปะ ขอนแก่น art gallery"
+        };
+
+        searchQuery = categoryKeywords[selectedCategory] || searchQuery;
       }
-      
-      // Check if we have any results
-      if (!allResults || allResults.length === 0) {
+
+      console.log('Loading recommended attractions for category:', selectedCategory, 'with query:', searchQuery);
+
+      // Use text search for better results
+      const results = await googleMapsService.textSearchPlaces(searchQuery, location, 30000);
+
+      if (!results || results.length === 0) {
+        console.log('No results found for category:', selectedCategory);
         setAttractions([]);
         clearMarkers();
         setIsSearching(false);
         return;
       }
-      
+
       // Get detailed information for each attraction
       const attractionResults: TouristAttraction[] = [];
-      
-      for (const result of allResults.slice(0, 20)) { // Limit to 20 results
+
+      for (const result of results.slice(0, 20)) { // Limit to 20 results
         try {
           let detailedPlace = result;
-          
+
           // Get more details if we have a place_id
           if (result.place_id) {
             try {
@@ -301,23 +300,23 @@ const TouristAttractionSearch = () => {
               console.log('Could not get details for place:', result.name);
             }
           }
-          
+
           // Calculate real distance using coordinates
           let distance = 0;
           if (detailedPlace.geometry?.location) {
-            const attractionLat = typeof detailedPlace.geometry.location.lat === 'function' 
-              ? detailedPlace.geometry.location.lat() 
+            const attractionLat = typeof detailedPlace.geometry.location.lat === 'function'
+              ? detailedPlace.geometry.location.lat()
               : detailedPlace.geometry.location.lat;
-            const attractionLng = typeof detailedPlace.geometry.location.lng === 'function' 
-              ? detailedPlace.geometry.location.lng() 
+            const attractionLng = typeof detailedPlace.geometry.location.lng === 'function'
+              ? detailedPlace.geometry.location.lng()
               : detailedPlace.geometry.location.lng;
-            
+
             distance = calculateDistance(
               userLocation.lat, userLocation.lng,
               attractionLat as number, attractionLng as number
             );
           }
-          
+
           // Get photos from Google Places API
           let photos: string[] = [];
           if (detailedPlace.photos && detailedPlace.photos.length > 0) {
@@ -325,14 +324,14 @@ const TouristAttractionSearch = () => {
               return photo.getUrl({ maxWidth: 400, maxHeight: 300 });
             });
           }
-          
-          // Add all attractions, create fallback place_id if needed
+
+          // Create attraction object
           const attraction: TouristAttraction = {
             place_id: detailedPlace.place_id || `attraction_${Date.now()}_${Math.random()}`,
             name: detailedPlace.name || 'สถานที่ท่องเที่ยว',
             description: detailedPlace.vicinity || detailedPlace.formatted_address || 'สถานที่ท่องเที่ยวในขอนแก่น',
             rating: detailedPlace.rating || undefined,
-            opening_hours: detailedPlace.opening_hours?.isOpen() !== undefined 
+            opening_hours: detailedPlace.opening_hours?.isOpen() !== undefined
               ? (detailedPlace.opening_hours.isOpen() ? 'เปิดอยู่' : 'ปิดแล้ว')
               : undefined,
             phone: detailedPlace.formatted_phone_number || undefined,
@@ -341,9 +340,9 @@ const TouristAttractionSearch = () => {
             photos: photos,
             types: detailedPlace.types || []
           };
-          
+
           attractionResults.push(attraction);
-          
+
           if (!detailedPlace.place_id) {
             console.log('Added attraction without place_id with fallback ID:', detailedPlace.name);
           }
@@ -351,15 +350,80 @@ const TouristAttractionSearch = () => {
           console.log('Error processing attraction:', error);
         }
       }
-      
-      // Filter attractions within 30km
-      const filteredAttractions = attractionResults.filter(a => (a.distance || 0) <= 30);
-      
-      // Sort by distance (nearest first) and take the results
-      const finalAttractions = filteredAttractions.sort((a, b) => (a.distance || 0) - (b.distance || 0));
-      
+
+      // Filter attractions within 30km and with relevant categories
+      const filteredAttractions = attractionResults.filter(a => {
+        const withinDistance = (a.distance || 0) <= 30;
+
+        // Additional filtering based on category
+        if (selectedCategory !== "ทั้งหมด") {
+          const types = a.types || [];
+          let categoryMatch = false;
+
+          switch (selectedCategory) {
+            case "วัด":
+              categoryMatch = types.includes('place_of_worship') ||
+                             types.includes('church') ||
+                             types.includes('hindu_temple') ||
+                             a.name?.toLowerCase().includes('วัด');
+              break;
+            case "พิพิธภัณฑ์":
+              categoryMatch = types.includes('museum') ||
+                             a.name?.toLowerCase().includes('museum') ||
+                             a.name?.toLowerCase().includes('พิพิธ');
+              break;
+            case "สวนสาธารณะ":
+              categoryMatch = types.includes('park') ||
+                             a.name?.toLowerCase().includes('park') ||
+                             a.name?.toLowerCase().includes('สวน');
+              break;
+            case "ตลาด":
+              categoryMatch = types.includes('shopping_mall') ||
+                             a.name?.toLowerCase().includes('ตลาด') ||
+                             a.name?.toLowerCase().includes('market');
+              break;
+            case "ห้างสรรพสินค้า":
+              categoryMatch = types.includes('shopping_mall') ||
+                             a.name?.toLowerCase().includes('ห้าง') ||
+                             a.name?.toLowerCase().includes('mall');
+              break;
+            case "สถานที่ท่องเที่ยว":
+              categoryMatch = types.includes('tourist_attraction') ||
+                             types.includes('historical_landmark');
+              break;
+            case "ธรรมชาติ":
+              categoryMatch = types.includes('park') ||
+                             types.includes('natural_feature') ||
+                             a.name?.toLowerCase().includes('ธรรมชาติ');
+              break;
+            case "ประวัติศาสตร์":
+              categoryMatch = types.includes('historical_landmark') ||
+                             a.name?.toLowerCase().includes('ประวัติ');
+              break;
+            case "ศิลปะ":
+              categoryMatch = types.includes('art_gallery') ||
+                             a.name?.toLowerCase().includes('ศิลป');
+              break;
+            default:
+              categoryMatch = true;
+          }
+
+          return withinDistance && categoryMatch;
+        }
+
+        return withinDistance;
+      });
+
+      // Sort by relevance (rating + photos) then distance
+      const finalAttractions = filteredAttractions.sort((a, b) => {
+        const aScore = (a.rating || 0) + (a.photos?.length || 0) * 0.5;
+        const bScore = (b.rating || 0) + (b.photos?.length || 0) * 0.5;
+        return bScore - aScore || (a.distance || 0) - (b.distance || 0);
+      });
+
+      console.log(`Loaded ${finalAttractions.length} attractions for category: ${selectedCategory}`);
       setAttractions(finalAttractions);
-     
+
       // Add markers to map
       await addMarkersToMap(finalAttractions);
     } catch (error) {
@@ -373,25 +437,32 @@ const TouristAttractionSearch = () => {
 
   const handleSearch = async () => {
     if (!searchTerm.trim() || !userLocation) return;
-    
+
     setIsSearching(true);
     try {
+      console.log('Searching for:', searchTerm + ' ขอนแก่น');
+
+      // Use text search for user queries
       const location = new google.maps.LatLng(userLocation.lat, userLocation.lng);
-      const results = await googleMapsService.searchNearbyRestaurants(location, 30000, searchTerm);
-      
+      const query = searchTerm.trim() + ' ขอนแก่น สถานที่ท่องเที่ยว';
+      const results = await googleMapsService.textSearchPlaces(query, location, 50000);
+
+      console.log('Search results:', results);
+
       if (!results || results.length === 0) {
         setAttractions([]);
         clearMarkers();
         setIsSearching(false);
         return;
       }
-      
+
       const attractionResults: TouristAttraction[] = [];
-      
+
       for (const result of results.slice(0, 20)) {
         try {
           let detailedPlace = result;
-          
+
+          // Get more details if we have a place_id
           if (result.place_id) {
             try {
               detailedPlace = await googleMapsService.getPlaceDetails(result.place_id);
@@ -399,22 +470,22 @@ const TouristAttractionSearch = () => {
               console.log('Could not get details for place:', result.name);
             }
           }
-          
+
           let distance = 0;
           if (detailedPlace.geometry?.location) {
-            const attractionLat = typeof detailedPlace.geometry.location.lat === 'function' 
-              ? detailedPlace.geometry.location.lat() 
+            const attractionLat = typeof detailedPlace.geometry.location.lat === 'function'
+              ? detailedPlace.geometry.location.lat()
               : detailedPlace.geometry.location.lat;
-            const attractionLng = typeof detailedPlace.geometry.location.lng === 'function' 
-              ? detailedPlace.geometry.location.lng() 
+            const attractionLng = typeof detailedPlace.geometry.location.lng === 'function'
+              ? detailedPlace.geometry.location.lng()
               : detailedPlace.geometry.location.lng;
-            
+
             distance = calculateDistance(
               userLocation.lat, userLocation.lng,
               attractionLat as number, attractionLng as number
             );
           }
-          
+
           // Get photos from Google Places API
           let photos: string[] = [];
           if (detailedPlace.photos && detailedPlace.photos.length > 0) {
@@ -423,40 +494,64 @@ const TouristAttractionSearch = () => {
             });
           }
 
-          // Add all attractions, create fallback place_id if needed
-          const attraction: TouristAttraction = {
-            place_id: detailedPlace.place_id || `attraction_${Date.now()}_${Math.random()}`,
-            name: detailedPlace.name || 'สถานที่ท่องเที่ยว',
-            description: detailedPlace.vicinity || detailedPlace.formatted_address || 'สถานที่ท่องเที่ยวในขอนแก่น',
-            rating: detailedPlace.rating || undefined,
-            opening_hours: detailedPlace.opening_hours?.isOpen() !== undefined 
-              ? (detailedPlace.opening_hours.isOpen() ? 'เปิดอยู่' : 'ปิดแล้ว')
-              : undefined,
-            phone: detailedPlace.formatted_phone_number || undefined,
-            vicinity: detailedPlace.vicinity || detailedPlace.formatted_address || 'ขอนแก่น',
-            distance: distance,
-            photos: photos,
-            types: detailedPlace.types || []
-          };
-          
-          attractionResults.push(attraction);
-          
-          if (!detailedPlace.place_id) {
-            console.log('Added attraction without place_id with fallback ID:', detailedPlace.name);
+          // Check if it's actually a tourist attraction (filter out restaurants, etc.)
+          const types = detailedPlace.types || [];
+          const isTouristAttraction =
+            types.includes('tourist_attraction') ||
+            types.includes('museum') ||
+            types.includes('park') ||
+            types.includes('place_of_worship') ||
+            types.includes('church') ||
+            types.includes('hindu_temple') ||
+            types.includes('historical_landmark') ||
+            types.includes('art_gallery') ||
+            result.name?.toLowerCase().includes('วัด') ||
+            result.name?.toLowerCase().includes('museum') ||
+            result.name?.toLowerCase().includes('park');
+
+          if (isTouristAttraction) {
+            const attraction: TouristAttraction = {
+              place_id: detailedPlace.place_id || `attraction_${Date.now()}_${Math.random()}`,
+              name: detailedPlace.name || 'สถานที่ท่องเที่ยว',
+              description: detailedPlace.vicinity || detailedPlace.formatted_address || 'สถานที่ท่องเที่ยวในขอนแก่น',
+              rating: detailedPlace.rating || undefined,
+              opening_hours: detailedPlace.opening_hours?.isOpen() !== undefined
+                ? (detailedPlace.opening_hours.isOpen() ? 'เปิดอยู่' : 'ปิดแล้ว')
+                : undefined,
+              phone: detailedPlace.formatted_phone_number || undefined,
+              vicinity: detailedPlace.vicinity || detailedPlace.formatted_address || 'ขอนแก่น',
+              distance: distance,
+              photos: photos,
+              types: detailedPlace.types || []
+            };
+
+            attractionResults.push(attraction);
+
+            if (!detailedPlace.place_id) {
+              console.log('Added attraction without place_id with fallback ID:', detailedPlace.name);
+            }
           }
         } catch (error) {
           console.log('Error processing attraction:', error);
         }
       }
-      
-      // Filter attractions within 30km and sort by distance
-      const filteredAttractions = attractionResults.filter(a => (a.distance || 0) <= 30);
-      const sortedAttractions = filteredAttractions.sort((a, b) => (a.distance || 0) - (b.distance || 0));
-      
-      setAttractions(sortedAttractions);
-      
+
+      // Sort by distance and relevance
+      const sortedAttractions = attractionResults.sort((a, b) => {
+        // Prioritize attractions with ratings and photos
+        const aScore = (a.rating || 0) + (a.photos?.length || 0) * 0.5;
+        const bScore = (b.rating || 0) + (b.photos?.length || 0) * 0.5;
+        return bScore - aScore || (a.distance || 0) - (b.distance || 0);
+      });
+
+      // Use only API results, no fallback mock data
+      const finalAttractions = sortedAttractions;
+
+      console.log('Final attractions:', finalAttractions.length, 'items');
+      setAttractions(finalAttractions);
+
       // Add markers to map
-      await addMarkersToMap(sortedAttractions);
+      await addMarkersToMap(finalAttractions);
     } catch (error) {
       console.error("Error searching attractions:", error);
       setAttractions([]);
